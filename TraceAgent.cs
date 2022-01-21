@@ -1,97 +1,99 @@
 ﻿using System;
-using System.Buffers.Text;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Collections.Specialized;
-using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
 using MessagePack;
 
-namespace MockTraceAgent
+namespace MockTraceAgent;
+
+public sealed class TraceAgent : IDisposable
 {
-    public sealed class MockTracerAgent : IDisposable
+    private readonly HttpListener _listener;
+    private readonly Thread _listenerThread;
+    private readonly ReadOnlyMemory<byte> _responseBytes = Encoding.UTF8.GetBytes("{}");
+
+    public event EventHandler<RequestReceivedEventArgs>? RequestReceived;
+
+    public TraceAgent(int port)
     {
-        private readonly HttpListener _listener;
-        private readonly Thread _listenerThread;
-        private readonly byte[] _responseBytes = Encoding.UTF8.GetBytes("{}");
+        var listener = new HttpListener();
+        string portString = port.ToString();
 
-        public event EventHandler<TracesReceivedEventArgs>? TracesReceived;
+        listener.Prefixes.Add($"http://127.0.0.1:{portString}/");
+        listener.Prefixes.Add($"http://localhost:{portString}/");
 
-        public MockTracerAgent(int port)
+        try
         {
-            var listener = new HttpListener();
-            string portString = port.ToString();
+            listener.Start();
+            _listener = listener;
 
-            listener.Prefixes.Add($"http://127.0.0.1:{portString}/");
-            listener.Prefixes.Add($"http://localhost:{portString}/");
+            _listenerThread = new Thread(HandleHttpRequests);
+            _listenerThread.Start();
+        }
+        catch (Exception)
+        {
+            listener.Close();
+            throw;
+        }
+    }
 
+    public void Dispose()
+    {
+        if (_listener != null)
+        {
+            _listener.Stop();
+            _listener.Close();
+        }
+    }
+
+    private void OnRequestReceived(byte[] buffer, IList<IList<Span>> traceChunks)
+    {
+        RequestReceived?.Invoke(this, new RequestReceivedEventArgs(buffer, traceChunks));
+    }
+
+    private void HandleHttpRequests()
+    {
+        while (_listener.IsListening)
+        {
             try
             {
-                listener.Start();
-                _listener = listener;
+                // this call blocks until we received a request
+                var ctx = _listener.GetContext();
 
-                _listenerThread = new Thread(HandleHttpRequests);
-                _listenerThread.Start();
+                var requestReceivedHandler = RequestReceived;
+
+                if (requestReceivedHandler != null)
+                {
+                    var buffer = new byte[(int)ctx.Request.ContentLength64];
+                    ctx.Request.InputStream.Read(buffer);
+                    var traceChunks = MessagePackSerializer.Deserialize<IList<IList<Span>>>(buffer);
+                    OnRequestReceived(buffer, traceChunks);
+                }
+
+                // Set content-length to prevent Transfer-Encoding: Chunked
+                ctx.Response.ContentType = "application/json";
+                ctx.Response.ContentLength64 = _responseBytes.Length;
+                ctx.Response.OutputStream.Write(_responseBytes.Span);
+                ctx.Response.Close();
             }
-            catch (Exception)
+            catch (HttpListenerException)
             {
-                listener.Close();
-                throw;
+                // listener was stopped,
+                // ignore to let the loop end and the method return
             }
-        }
-
-        public void Dispose()
-        {
-            if (_listener != null)
+            catch (ObjectDisposedException)
             {
-                _listener.Stop();
-                _listener.Close();
+                // the response has been already disposed.
             }
-        }
-
-        private void OnTracesReceived(IList<IList<Span>> traces)
-        {
-            TracesReceived?.Invoke(this, new TracesReceivedEventArgs(traces));
-        }
-
-        private void HandleHttpRequests()
-        {
-            while (_listener.IsListening)
+            catch (InvalidOperationException)
             {
-                try
-                {
-                    var ctx = _listener.GetContext();
-                    var spans = MessagePackSerializer.Deserialize<IList<IList<Span>>>(ctx.Request.InputStream);
-                    OnTracesReceived(spans);
-
-                    // NOTE: HttpStreamRequest doesn't support Transfer-Encoding: Chunked
-                    // (Setting content-length avoids that)
-                    ctx.Response.ContentType = "application/json";
-                    ctx.Response.ContentLength64 = _responseBytes.LongLength;
-                    ctx.Response.OutputStream.Write(_responseBytes, 0, _responseBytes.Length);
-                    ctx.Response.Close();
-                }
-                catch (HttpListenerException)
-                {
-                    // listener was stopped,
-                    // ignore to let the loop end and the method return
-                }
-                catch (ObjectDisposedException)
-                {
-                    // the response has been already disposed.
-                }
-                catch (InvalidOperationException)
-                {
-                    // this can occur when setting Response.ContentLength64, with the framework claiming that the response has already been submitted
-                    // for now ignore, and we'll see if this introduces downstream issues
-                }
-                catch (Exception) when (!_listener.IsListening)
-                {
-                    // we don't care about any exception when listener is stopped
-                }
+                // this can occur when setting Response.ContentLength64, with the framework claiming that the response has already been submitted
+                // for now ignore, and we'll see if this introduces downstream issues
+            }
+            catch (Exception) when (!_listener.IsListening)
+            {
+                // we don't care about any exception when listener is stopped
             }
         }
     }
