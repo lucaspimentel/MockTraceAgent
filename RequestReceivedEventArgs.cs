@@ -1,17 +1,15 @@
 using System;
-using System.Collections.Generic;
 
 namespace MockTraceAgent;
 
 public class RequestReceivedEventArgs : EventArgs
 {
+    public string? Url { get; }
     public byte[] Contents { get; }
 
-    public IList<IList<Span>> TraceChunks { get; }
-
-    public RequestReceivedEventArgs(byte[] contents, IList<IList<Span>> traceChunks)
+    public RequestReceivedEventArgs(string? url, byte[] contents)
     {
+        Url = url;
         Contents = contents;
-        TraceChunks = traceChunks;
     }
 }

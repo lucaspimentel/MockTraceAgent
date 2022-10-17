@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading;
-using MessagePack;
 
 namespace MockTraceAgent;
 
@@ -47,9 +45,9 @@ public sealed class TraceAgent : IDisposable
         }
     }
 
-    private void OnRequestReceived(byte[] buffer, IList<IList<Span>> traceChunks)
+    private void OnRequestReceived(string? url, byte[] buffer)
     {
-        RequestReceived?.Invoke(this, new RequestReceivedEventArgs(buffer, traceChunks));
+        RequestReceived?.Invoke(this, new RequestReceivedEventArgs(url, buffer));
     }
 
     private void HandleHttpRequests()
@@ -58,23 +56,35 @@ public sealed class TraceAgent : IDisposable
         {
             try
             {
-                // this call blocks until we received a request
+                // this call blocks until we receive a request
                 var ctx = _listener.GetContext();
 
                 var requestReceivedHandler = RequestReceived;
 
                 if (requestReceivedHandler != null)
                 {
-                    var buffer = new byte[(int)ctx.Request.ContentLength64];
+                    var contentLength = (int)ctx.Request.ContentLength64;
+                    var buffer = new byte[contentLength];
+
+#if NETFRAMEWORK
+                    ctx.Request.InputStream.Read(buffer, 0, contentLength);
+#else
                     ctx.Request.InputStream.Read(buffer);
-                    var traceChunks = MessagePackSerializer.Deserialize<IList<IList<Span>>>(buffer);
-                    OnRequestReceived(buffer, traceChunks);
+#endif
+
+                    OnRequestReceived(ctx.Request.RawUrl, buffer);
                 }
 
                 // Set content-length to prevent Transfer-Encoding: Chunked
                 ctx.Response.ContentType = "application/json";
                 ctx.Response.ContentLength64 = _responseBytes.Length;
+
+#if NETFRAMEWORK
+                ctx.Response.OutputStream.Write(_responseBytes.ToArray(), 0, _responseBytes.Length);
+#else
                 ctx.Response.OutputStream.Write(_responseBytes.Span);
+#endif
+
                 ctx.Response.Close();
             }
             catch (HttpListenerException)
