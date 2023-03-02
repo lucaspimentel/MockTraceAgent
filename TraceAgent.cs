@@ -1,20 +1,24 @@
 ﻿using System;
+using System.Buffers;
 using System.Net;
-using System.Text;
 using System.Threading;
 
 namespace MockTraceAgent;
 
 public sealed class TraceAgent : IDisposable
 {
+    private static readonly byte[] ResponseBytes = "{}"u8.ToArray();
+
     private readonly HttpListener _listener;
     private readonly Thread _listenerThread;
-    private readonly ReadOnlyMemory<byte> _responseBytes = Encoding.UTF8.GetBytes("{}");
+    private readonly Action<string, int, ReadOnlyMemory<byte>>? _requestReceivedCallback;
+    private readonly bool _readRequestBytes;
 
-    public event EventHandler<RequestReceivedEventArgs>? RequestReceived;
-
-    public TraceAgent(int port)
+    public TraceAgent(int port, Action<string, int, ReadOnlyMemory<byte>>? requestReceivedCallback, bool readRequestBytes)
     {
+        _requestReceivedCallback = requestReceivedCallback;
+        _readRequestBytes = readRequestBytes;
+
         var listener = new HttpListener();
         string portString = port.ToString();
 
@@ -38,16 +42,11 @@ public sealed class TraceAgent : IDisposable
 
     public void Dispose()
     {
-        if (_listener != null)
+        if (_listener != null!)
         {
             _listener.Stop();
             _listener.Close();
         }
-    }
-
-    private void OnRequestReceived(string? url, byte[] buffer)
-    {
-        RequestReceived?.Invoke(this, new RequestReceivedEventArgs(url, buffer));
     }
 
     private void HandleHttpRequests()
@@ -59,32 +58,36 @@ public sealed class TraceAgent : IDisposable
                 // this call blocks until we receive a request
                 var ctx = _listener.GetContext();
 
-                var requestReceivedHandler = RequestReceived;
-
-                if (requestReceivedHandler != null)
+                if (_requestReceivedCallback != null)
                 {
                     var contentLength = (int)ctx.Request.ContentLength64;
-                    var buffer = new byte[contentLength];
+                    byte[]? rentedBuffer;
+                    ReadOnlyMemory<byte> memory;
 
-#if NETFRAMEWORK
-                    ctx.Request.InputStream.Read(buffer, 0, contentLength);
-#else
-                    ctx.Request.InputStream.Read(buffer);
-#endif
+                    if (_readRequestBytes)
+                    {
+                        rentedBuffer = ArrayPool<byte>.Shared.Rent(contentLength);
+                        var bytesRead = ctx.Request.InputStream.Read(rentedBuffer, 0, contentLength);
+                        memory = new ReadOnlyMemory<byte>(rentedBuffer, 0, bytesRead);
+                    }
+                    else
+                    {
+                        rentedBuffer = null;
+                        memory = null;
+                    }
 
-                    OnRequestReceived(ctx.Request.RawUrl, buffer);
+                    _requestReceivedCallback(ctx.Request.RawUrl ?? "no-url", contentLength, memory);
+
+                    if (rentedBuffer != null)
+                    {
+                        ArrayPool<byte>.Shared.Return(rentedBuffer);
+                    }
                 }
 
                 // Set content-length to prevent Transfer-Encoding: Chunked
                 ctx.Response.ContentType = "application/json";
-                ctx.Response.ContentLength64 = _responseBytes.Length;
-
-#if NETFRAMEWORK
-                ctx.Response.OutputStream.Write(_responseBytes.ToArray(), 0, _responseBytes.Length);
-#else
-                ctx.Response.OutputStream.Write(_responseBytes.Span);
-#endif
-
+                ctx.Response.ContentLength64 = ResponseBytes.Length;
+                ctx.Response.OutputStream.Write(ResponseBytes);
                 ctx.Response.Close();
             }
             catch (HttpListenerException)

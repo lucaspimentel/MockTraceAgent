@@ -6,7 +6,7 @@ namespace MockTraceAgent
 {
     [MessagePackObject]
     [DebuggerDisplay("TraceId={TraceId}, SpanId={SpanId}, Service={Service}, Name={Name}, Resource={Resource}")]
-    public class Span
+    public sealed class Span
     {
         [Key("trace_id")]
         public ulong TraceId { get; set; }

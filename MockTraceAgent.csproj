@@ -9,8 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MessagePack" Version="2.3.85" />
-    <PackageReference Include="MessagePackAnalyzer" Version="2.3.85" />
-    <PackageReference Include="System.Text.Json" Version="6.0.2" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.46.0" />
   </ItemGroup>
 
 </Project>
