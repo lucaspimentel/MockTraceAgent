@@ -88,7 +88,7 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
         return 0;
     }
 
-    static void RequestReceived(
+    private static void RequestReceived(
         string url,
         int contentsLength,
         ReadOnlyMemory<byte> contents,
