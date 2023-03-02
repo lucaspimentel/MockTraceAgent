@@ -3,4 +3,5 @@
 .vscode
 bin/
 obj/
-trace-chunk-*.json
+payload*.bin
+payload*.json
