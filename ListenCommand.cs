@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using MessagePack;
 using Spectre.Console.Cli;
 
@@ -40,7 +41,7 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
         public string? UrlFilter { get; init; }
     }
 
-    public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings)
+    public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings, CancellationToken cancellationToken)
     {
         var readRequestBytes = settings.ShowCounts || settings.SaveFileOptions != SaveOptions.None;
 
