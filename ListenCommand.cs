@@ -99,7 +99,7 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
             DateTime now = DateTime.Now;
             Console.Write($"{now:yyyy-MM-dd HH:mm:ss.ff} Received {contentsLength:N0} bytes at {url}. ");
 
-            if (contents.Length > 1 && (settings.UrlFilter == null || url.Contains(settings.UrlFilter, StringComparison.OrdinalIgnoreCase)))
+            if (contents.Length > 0 && (settings.UrlFilter == null || url.Contains(settings.UrlFilter, StringComparison.OrdinalIgnoreCase)))
             {
                 if (settings.ShowCounts && url == "/v0.4/traces")
                 {
@@ -116,7 +116,7 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
 
                     if ((settings.SaveFileOptions & SaveOptions.RawBytes) == SaveOptions.RawBytes)
                     {
-                        var msgpackFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd HH-mm-ss-ff}.bin";
+                        var msgpackFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.bin";
                         using var msgpackFileStream = File.Create(msgpackFilename);
                         msgpackFileStream.Write(contents.Span);
                         Console.Write($"Saved raw bytes to \"{msgpackFilename}\". ");
@@ -124,7 +124,7 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
 
                     if ((settings.SaveFileOptions & SaveOptions.ConvertToJson) == SaveOptions.ConvertToJson)
                     {
-                        var jsonFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd HH-mm-ss-ff}.json";
+                        var jsonFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.json";
                         string json = MessagePackSerializer.ConvertToJson(contents);
                         File.WriteAllText(jsonFilename, json);
                         Console.Write($"Saved json to \"{jsonFilename}\". ");
