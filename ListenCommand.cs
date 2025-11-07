@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using MessagePack;
+using MockTraceAgent.Core;
 using Spectre.Console.Cli;
 
 namespace MockTraceAgent;

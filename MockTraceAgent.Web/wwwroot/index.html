@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MockTraceAgent - Web Frontend</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MockTraceAgent - Web Frontend</h1>
+            <div class="stats-bar">
+                <div class="stat">
+                    <span class="stat-label">Total Traces:</span>
+                    <span class="stat-value" id="totalTraces">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Total Spans:</span>
+                    <span class="stat-value" id="totalSpans">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Total Bytes:</span>
+                    <span class="stat-value" id="totalBytes">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Status:</span>
+                    <span class="stat-value" id="connectionStatus">Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="left-panel">
+                <h2>Received Traces</h2>
+                <div class="trace-list" id="traceList">
+                    <p class="empty-message">No traces received yet. Waiting for incoming traces...</p>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="trace-details" id="traceDetails">
+                    <p class="empty-message">Select a trace to view details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
