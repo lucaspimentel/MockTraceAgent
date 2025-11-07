@@ -61,7 +61,7 @@ The web UI will be available at http://localhost:5000. The trace agent listens o
 Start the CLI application for command-line trace inspection:
 
 ```bash
-dotnet run --project MockTraceAgent.csproj
+dotnet run --project MockTraceAgent.Cli.csproj
 ```
 
 The agent will listen for traces and display received requests. Press ENTER to exit.
