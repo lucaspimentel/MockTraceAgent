@@ -37,6 +37,15 @@ cd MockTraceAgent
 dotnet build
 ```
 
+## Project Structure
+
+The solution consists of three projects:
+- **MockTraceAgent.Cli** - CLI application (command-line tool)
+- **MockTraceAgent.Web** - Web application (browser UI + REST API)
+- **MockTraceAgent.Core** - Shared library (trace processing logic)
+
+**Important**: CLI and Web applications listen on the same port by default (8126) and cannot run simultaneously. Configure different ports if you need to run both.
+
 ## Usage
 
 ### Web Application (Recommended)
@@ -66,15 +75,17 @@ dotnet run --project MockTraceAgent.Cli.csproj
 
 The agent will listen for traces and display received requests. Press ENTER to exit.
 
-### Command-Line Options
+### CLI Command-Line Options
+
+All CLI commands require the `--project` flag to specify the CLI project.
 
 #### Port Configuration
 
 Listen on a custom port:
 
 ```bash
-dotnet run -- --port 8080
-dotnet run -- -p 8080
+dotnet run --project MockTraceAgent.Cli.csproj -- --port 8080
+dotnet run --project MockTraceAgent.Cli.csproj -- -p 8080
 ```
 
 #### Display Trace Statistics
@@ -82,8 +93,8 @@ dotnet run -- -p 8080
 Show trace chunk and span counts for received payloads:
 
 ```bash
-dotnet run -- --show-counts
-dotnet run -- -c
+dotnet run --project MockTraceAgent.Cli.csproj -- --show-counts
+dotnet run --project MockTraceAgent.Cli.csproj -- -c
 ```
 
 This will deserialize `/v0.4/traces` payloads and display:
@@ -96,16 +107,16 @@ Save received payloads to files with timestamped filenames:
 
 ```bash
 # Save raw MessagePack bytes
-dotnet run -- --save RawBytes
+dotnet run --project MockTraceAgent.Cli.csproj -- --save RawBytes
 
 # Save as converted JSON
-dotnet run -- --save ConvertToJson
+dotnet run --project MockTraceAgent.Cli.csproj -- --save ConvertToJson
 
 # Save both formats
-dotnet run -- --save All
+dotnet run --project MockTraceAgent.Cli.csproj -- --save All
 
 # Short form
-dotnet run -- -s All
+dotnet run --project MockTraceAgent.Cli.csproj -- -s All
 ```
 
 Saved files use the format: `payload-{endpoint}-{timestamp}.{bin|json}`
@@ -117,22 +128,22 @@ Example: `payload-v0.4_traces-2025-11-06_14-23-45-12.json`
 Filter which URLs are processed and saved (default: `/traces`):
 
 ```bash
-dotnet run -- --url-filter /v0.4/traces
-dotnet run -- -f /v0.4/traces
+dotnet run --project MockTraceAgent.Cli.csproj -- --url-filter /v0.4/traces
+dotnet run --project MockTraceAgent.Cli.csproj -- -f /v0.4/traces
 ```
 
-### Combined Examples
+### CLI Combined Examples
 
 Show counts and save JSON payloads on port 9000:
 
 ```bash
-dotnet run -- -p 9000 -c -s ConvertToJson
+dotnet run --project MockTraceAgent.Cli.csproj -- -p 9000 -c -s ConvertToJson
 ```
 
 Full monitoring with all features:
 
 ```bash
-dotnet run -- --port 8126 --show-counts --save All --url-filter /v0.4/traces
+dotnet run --project MockTraceAgent.Cli.csproj -- --port 8126 --show-counts --save All --url-filter /v0.4/traces
 ```
 
 ## Configuration for Datadog Tracers
@@ -177,6 +188,38 @@ settings.Exporter.AgentUri = new Uri("http://localhost:8126");
 ```
 2025-11-06 14:23:45.12 Received 1,024 bytes at /v0.4/traces. 5 trace chunks, 23 total spans. Saved json to "payload-v0.4_traces-2025-11-06_14-23-45-12.json".
 ```
+
+## REST API (Web Application)
+
+The web application provides a REST API for programmatic access to trace data:
+
+### Endpoints
+
+- **GET /api/traces** - List all received traces (summary)
+- **GET /api/traces/{id}** - Get full trace details with spans
+- **GET /api/traces/{id}/raw** - Download raw MessagePack bytes
+- **GET /api/traces/{id}/json** - Download trace as JSON
+- **GET /api/stats** - Get aggregate statistics
+
+### Example Usage
+
+```bash
+# Get all traces
+curl http://localhost:5000/api/traces
+
+# Get specific trace
+curl http://localhost:5000/api/traces/abc123def456
+
+# Download raw MessagePack
+curl -O http://localhost:5000/api/traces/abc123def456/raw
+
+# Get statistics
+curl http://localhost:5000/api/stats
+```
+
+### SignalR Hub
+
+Connect to `/hubs/traces` for real-time trace notifications via SignalR.
 
 ## Trace Payload Format
 
