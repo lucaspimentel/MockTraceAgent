@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Net;
 using System.Threading;
 
-namespace MockTraceAgent;
+namespace MockTraceAgent.Core;
 
 public sealed class TraceAgent : IDisposable
 {

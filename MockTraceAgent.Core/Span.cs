@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using MessagePack;
 using System.Diagnostics;
 
-namespace MockTraceAgent
+namespace MockTraceAgent.Core
 {
     [MessagePackObject]
     [DebuggerDisplay("TraceId={TraceId}, SpanId={SpanId}, Service={Service}, Name={Name}, Resource={Resource}")]

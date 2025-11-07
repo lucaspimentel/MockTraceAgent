@@ -1,0 +1,38 @@
+using MockTraceAgent.Web.Hubs;
+using MockTraceAgent.Web.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<TraceStorageService>();
+builder.Services.AddHostedService<TraceAgentHostedService>();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.MapHub<TracesHub>("/hubs/traces");
+
+// API endpoints
+app.MapGet("/api/traces", (TraceStorageService storage) => storage.GetAllTraces());
+app.MapGet("/api/traces/{id}", (string id, TraceStorageService storage) =>
+{
+    var trace = storage.GetTrace(id);
+    return trace != null ? Results.Ok(trace) : Results.NotFound();
+});
+app.MapGet("/api/traces/{id}/raw", (string id, TraceStorageService storage) =>
+{
+    var rawBytes = storage.GetRawBytes(id);
+    return rawBytes != null ? Results.File(rawBytes, "application/octet-stream", $"trace-{id}.bin") : Results.NotFound();
+});
+app.MapGet("/api/traces/{id}/json", (string id, TraceStorageService storage) =>
+{
+    var json = storage.GetJson(id);
+    return json != null ? Results.Content(json, "application/json", System.Text.Encoding.UTF8, $"trace-{id}.json") : Results.NotFound();
+});
+app.MapGet("/api/stats", (TraceStorageService storage) => storage.GetStatistics());
+
+app.Run();
