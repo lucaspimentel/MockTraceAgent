@@ -21,14 +21,49 @@ The solution now consists of three projects:
   - Spectre.Console.Cli (0.x) - for CLI argument parsing (CLI only)
   - SignalR (9.x) - for real-time web updates (Web only)
 
+## Project Structure
+
+```
+MockTraceAgent/
+├── MockTraceAgent.Cli.csproj          # CLI application project
+├── Program.cs                          # CLI entry point
+├── ListenCommand.cs                    # CLI command handler
+├── MockTraceAgent.Core/
+│   ├── MockTraceAgent.Core.csproj     # Shared library project
+│   ├── TraceAgent.cs                  # HTTP listener implementation
+│   └── Span.cs                        # MessagePack data model
+└── MockTraceAgent.Web/
+    ├── MockTraceAgent.Web.csproj      # Web application project
+    ├── Program.cs                      # ASP.NET Core entry point
+    ├── appsettings.json                # Configuration (TraceAgentPort)
+    ├── Hubs/TracesHub.cs              # SignalR hub
+    ├── Services/
+    │   ├── TraceAgentHostedService.cs  # Background trace listener
+    │   └── TraceStorageService.cs      # In-memory storage
+    ├── Models/TraceData.cs            # Data models
+    └── wwwroot/                        # Static web files
+        ├── index.html
+        ├── styles.css
+        └── app.js
+```
+
 ## Build & Run Commands
+
+### Build All Projects
+
+```bash
+# Build entire solution
+dotnet build
+
+# Build specific projects
+dotnet build MockTraceAgent.Cli.csproj
+dotnet build MockTraceAgent.Core/MockTraceAgent.Core.csproj
+dotnet build MockTraceAgent.Web/MockTraceAgent.Web.csproj
+```
 
 ### CLI Application
 
 ```bash
-# Build the CLI project
-dotnet build MockTraceAgent.Cli.csproj
-
 # Run the CLI application (default port 8126)
 dotnet run --project MockTraceAgent.Cli.csproj
 
@@ -49,20 +84,22 @@ dotnet run --project MockTraceAgent.Cli.csproj -- --save All
 
 # Filter by URL (default: /traces)
 dotnet run --project MockTraceAgent.Cli.csproj -- --url-filter /v0.4/traces
+
+# Combined example
+dotnet run --project MockTraceAgent.Cli.csproj -- --port 8126 --show-counts --save All
 ```
 
 ### Web Application
 
 ```bash
-# Build the web project
-dotnet build MockTraceAgent.Web/MockTraceAgent.Web.csproj
-
 # Run the web application
 dotnet run --project MockTraceAgent.Web/MockTraceAgent.Web.csproj
 
-# The web UI will be available at http://localhost:5000
-# The trace agent will listen on port 8126 (configurable via appsettings.json)
+# Web UI: http://localhost:5000
+# Trace agent: port 8126 (configurable in appsettings.json)
 ```
+
+**Important**: CLI and Web applications cannot run simultaneously on the same port. If both need to run, configure them to use different ports via `--port` (CLI) or `appsettings.json` (Web).
 
 ## Architecture
 
@@ -193,3 +230,80 @@ The web frontend provides:
 5. **Connection Status**
    - Real-time connection status indicator
    - Automatic reconnection on network issues
+
+## REST API Endpoints
+
+The web application exposes a REST API for programmatic access to trace data.
+
+### GET /api/traces
+List all received traces (summary view).
+
+**Response**: Array of trace summaries (most recent first)
+```json
+[
+  {
+    "id": "abc123...",
+    "receivedAt": "2025-11-07 10:30:45.12",
+    "url": "/v0.4/traces",
+    "contentLength": 1024,
+    "traceChunkCount": 5,
+    "totalSpanCount": 23
+  }
+]
+```
+
+### GET /api/traces/{id}
+Get detailed trace information including all spans.
+
+**Response**: Full trace data (without raw bytes)
+```json
+{
+  "id": "abc123...",
+  "receivedAt": "2025-11-07T10:30:45.123",
+  "url": "/v0.4/traces",
+  "contentLength": 1024,
+  "traceChunks": [[/* span objects */]],
+  "traceChunkCount": 1,
+  "totalSpanCount": 5
+}
+```
+
+**Note**: Raw bytes are excluded from this response to reduce payload size. Use `/api/traces/{id}/raw` to download them.
+
+### GET /api/traces/{id}/raw
+Download raw MessagePack bytes for a trace.
+
+**Response**: Binary file (application/octet-stream)
+- Filename: `trace-{id}.bin`
+- Content: Original MessagePack payload as received
+
+### GET /api/traces/{id}/json
+Download trace as JSON.
+
+**Response**: JSON file (application/json)
+- Filename: `trace-{id}.json`
+- Content: MessagePack payload converted to JSON
+
+### GET /api/stats
+Get aggregate statistics.
+
+**Response**: Statistics object
+```json
+{
+  "totalTraces": 42,
+  "totalSpans": 156,
+  "totalBytes": 51200,
+  "firstTraceAt": "2025-11-07T10:00:00.000",
+  "lastTraceAt": "2025-11-07T10:30:45.123"
+}
+```
+
+### SignalR Hub: /hubs/traces
+Real-time events for connected clients.
+
+**Event**: `ReceiveTrace` - Fired when new trace arrives
+```javascript
+connection.on("ReceiveTrace", (trace) => {
+  // trace object contains: id, receivedAt, url, contentLength, traceChunkCount, totalSpanCount
+});
+```
