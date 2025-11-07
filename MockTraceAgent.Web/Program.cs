@@ -21,7 +21,22 @@ app.MapGet("/api/traces", (TraceStorageService storage) => storage.GetAllTraces(
 app.MapGet("/api/traces/{id}", (string id, TraceStorageService storage) =>
 {
     var trace = storage.GetTrace(id);
-    return trace != null ? Results.Ok(trace) : Results.NotFound();
+    if (trace == null)
+    {
+        return Results.NotFound();
+    }
+
+    // Return trace without raw bytes (those are available via /api/traces/{id}/raw)
+    return Results.Ok(new
+    {
+        trace.Id,
+        trace.ReceivedAt,
+        trace.Url,
+        trace.ContentLength,
+        trace.TraceChunks,
+        trace.TraceChunkCount,
+        trace.TotalSpanCount
+    });
 });
 app.MapGet("/api/traces/{id}/raw", (string id, TraceStorageService storage) =>
 {
