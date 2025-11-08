@@ -32,7 +32,11 @@
 
         <div class="content">
             <div class="left-panel">
-                <h2>Received Traces</h2>
+                <h2>Received Payloads</h2>
+                <div class="filter-section">
+                    <label for="urlFilter">Filter by URL:</label>
+                    <input type="text" id="urlFilter" placeholder="e.g., /v0.4/traces" value="/v0.4/traces">
+                </div>
                 <div class="trace-list" id="traceList">
                     <p class="empty-message">No traces received yet. Waiting for incoming traces...</p>
                 </div>

@@ -6,6 +6,7 @@ const connection = new signalR.HubConnectionBuilder()
 
 let selectedTraceId = null;
 let traces = [];
+let urlFilter = '/v0.4/traces';
 
 // HTML escape function to prevent XSS
 function escapeHtml(unsafe) {
@@ -91,17 +92,31 @@ async function updateStatistics() {
     }
 }
 
+// Get filtered traces based on URL filter
+function getFilteredTraces() {
+    if (!urlFilter) {
+        return traces;
+    }
+    return traces.filter(trace => trace.url.includes(urlFilter));
+}
+
 // Render trace list
 function renderTraceList() {
     const traceList = document.getElementById('traceList');
+    const filteredTraces = getFilteredTraces();
 
     if (traces.length === 0) {
         traceList.innerHTML = '<p class="empty-message">No traces received yet. Waiting for incoming traces...</p>';
         return;
     }
 
+    if (filteredTraces.length === 0) {
+        traceList.innerHTML = '<p class="empty-message">No traces match the current filter.</p>';
+        return;
+    }
+
     traceList.innerHTML = '';
-    traces.forEach(trace => {
+    filteredTraces.forEach(trace => {
         addTraceToList(trace);
     });
 }
@@ -109,6 +124,11 @@ function renderTraceList() {
 // Add single trace to list
 function addTraceToList(trace) {
     const traceList = document.getElementById('traceList');
+
+    // Check if trace matches current filter
+    if (urlFilter && !trace.url.includes(urlFilter)) {
+        return; // Skip this trace if it doesn't match the filter
+    }
 
     // Remove empty message if present
     const emptyMessage = traceList.querySelector('.empty-message');
@@ -124,6 +144,21 @@ function addTraceToList(trace) {
         traceItem.classList.add('selected');
     }
 
+    // Add class for empty payloads (zero spans) or non-trace endpoints
+    const isTraceEndpoint = trace.url.includes('/v0.4/traces');
+    if (!isTraceEndpoint || (isTraceEndpoint && trace.totalSpanCount === 0)) {
+        traceItem.classList.add('empty-payload');
+    }
+
+    // Build the stats line - only show chunks/spans for trace endpoints
+    let statsHtml = `<span>${formatBytes(trace.contentLength)}</span>`;
+    if (isTraceEndpoint) {
+        statsHtml += `
+            <span>${trace.traceChunkCount} chunks</span>
+            <span class="${trace.totalSpanCount === 0 ? 'zero-spans' : ''}">${trace.totalSpanCount} spans</span>
+        `;
+    }
+
     traceItem.innerHTML = `
         <div class="trace-item-header">
             <span class="trace-id">${escapeHtml(trace.id.substring(0, 8))}</span>
@@ -133,9 +168,7 @@ function addTraceToList(trace) {
             <span><strong>URL:</strong> ${escapeHtml(trace.url)}</span>
         </div>
         <div class="trace-item-info">
-            <span>${formatBytes(trace.contentLength)}</span>
-            <span>${trace.traceChunkCount} chunks</span>
-            <span>${trace.totalSpanCount} spans</span>
+            ${statsHtml}
         </div>
     `;
 
@@ -376,5 +409,16 @@ function syntaxHighlight(json) {
     });
 }
 
+// Setup URL filter
+function setupUrlFilter() {
+    const urlFilterInput = document.getElementById('urlFilter');
+
+    urlFilterInput.addEventListener('input', (e) => {
+        urlFilter = e.target.value;
+        renderTraceList();
+    });
+}
+
 // Initialize
+setupUrlFilter();
 startConnection();
