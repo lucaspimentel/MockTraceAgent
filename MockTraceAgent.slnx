@@ -1,0 +1,5 @@
+﻿<Solution>
+  <Project Path="MockTraceAgent.Cli\MockTraceAgent.Cli.csproj" Type="Classic C#"/>
+  <Project Path="MockTraceAgent.Core\MockTraceAgent.Core.csproj" Type="Classic C#"/>
+  <Project Path="MockTraceAgent.Web\MockTraceAgent.Web.csproj" Type="Classic C#"/>
+</Solution>
