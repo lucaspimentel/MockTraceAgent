@@ -13,6 +13,7 @@ public sealed class TraceAgent : IDisposable
     private readonly Thread _listenerThread;
     private readonly Action<string, int, ReadOnlyMemory<byte>>? _requestReceivedCallback;
     private readonly bool _readRequestBytes;
+    private bool _disposed;
 
     public TraceAgent(int port, Action<string, int, ReadOnlyMemory<byte>>? requestReceivedCallback, bool readRequestBytes)
     {
@@ -42,10 +43,32 @@ public sealed class TraceAgent : IDisposable
 
     public void Dispose()
     {
-        if (_listener != null!)
+        if (_disposed)
         {
-            _listener.Stop();
-            _listener.Close();
+            return;
+        }
+
+        _disposed = true;
+
+        try
+        {
+            if (_listener != null! && _listener.IsListening)
+            {
+                _listener.Stop();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // Listener already disposed, ignore
+        }
+
+        try
+        {
+            _listener?.Close();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Listener already disposed, ignore
         }
     }
 
