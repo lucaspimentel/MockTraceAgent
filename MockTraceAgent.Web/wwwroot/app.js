@@ -7,6 +7,17 @@ const connection = new signalR.HubConnectionBuilder()
 let selectedTraceId = null;
 let traces = [];
 
+// HTML escape function to prevent XSS
+function escapeHtml(unsafe) {
+    if (unsafe == null) return '';
+    return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // Start SignalR connection
 async function startConnection() {
     try {
@@ -115,11 +126,11 @@ function addTraceToList(trace) {
 
     traceItem.innerHTML = `
         <div class="trace-item-header">
-            <span class="trace-id">${trace.id.substring(0, 8)}</span>
-            <span class="trace-time">${trace.receivedAt}</span>
+            <span class="trace-id">${escapeHtml(trace.id.substring(0, 8))}</span>
+            <span class="trace-time">${escapeHtml(trace.receivedAt)}</span>
         </div>
         <div class="trace-item-info">
-            <span><strong>URL:</strong> ${trace.url}</span>
+            <span><strong>URL:</strong> ${escapeHtml(trace.url)}</span>
         </div>
         <div class="trace-item-info">
             <span>${formatBytes(trace.contentLength)}</span>
@@ -163,15 +174,15 @@ function displayTraceDetails(trace) {
         <div class="trace-info">
             <div class="trace-info-row">
                 <span class="trace-info-label">Trace ID:</span>
-                <span class="trace-info-value">${trace.id}</span>
+                <span class="trace-info-value">${escapeHtml(trace.id)}</span>
             </div>
             <div class="trace-info-row">
                 <span class="trace-info-label">Received At:</span>
-                <span class="trace-info-value">${trace.receivedAt}</span>
+                <span class="trace-info-value">${escapeHtml(trace.receivedAt)}</span>
             </div>
             <div class="trace-info-row">
                 <span class="trace-info-label">URL:</span>
-                <span class="trace-info-value">${trace.url}</span>
+                <span class="trace-info-value">${escapeHtml(trace.url)}</span>
             </div>
             <div class="trace-info-row">
                 <span class="trace-info-label">Content Length:</span>
@@ -188,8 +199,8 @@ function displayTraceDetails(trace) {
         </div>
 
         <div class="actions">
-            <a href="/api/traces/${trace.id}/raw" class="btn" download="trace-${trace.id}.bin">Download Raw MessagePack</a>
-            <a href="/api/traces/${trace.id}/json" class="btn btn-secondary" download="trace-${trace.id}.json">Download JSON</a>
+            <a href="/api/traces/${escapeHtml(trace.id)}/raw" class="btn" download="trace-${escapeHtml(trace.id)}.bin">Download Raw MessagePack</a>
+            <a href="/api/traces/${escapeHtml(trace.id)}/json" class="btn btn-secondary" download="trace-${escapeHtml(trace.id)}.json">Download JSON</a>
         </div>
 
         <div class="tabs">
@@ -263,17 +274,17 @@ function renderSpanNode(span, depth) {
         <div class="span-node" style="margin-left: ${depth * 2}rem;">
             <div class="span-card ${errorClass}">
                 <div class="span-card-header">
-                    <span class="span-name">${span.name || 'unnamed'}</span>
+                    <span class="span-name">${escapeHtml(span.name) || 'unnamed'}</span>
                     <span class="span-duration">${duration}</span>
                 </div>
                 <div class="span-info">
-                    <span class="span-info-label">Service:</span> ${span.service || 'N/A'}
+                    <span class="span-info-label">Service:</span> ${escapeHtml(span.service) || 'N/A'}
                 </div>
                 <div class="span-info">
-                    <span class="span-info-label">Resource:</span> ${span.resource || 'N/A'}
+                    <span class="span-info-label">Resource:</span> ${escapeHtml(span.resource) || 'N/A'}
                 </div>
                 <div class="span-info">
-                    <span class="span-info-label">Type:</span> ${span.type || 'N/A'}
+                    <span class="span-info-label">Type:</span> ${escapeHtml(span.type) || 'N/A'}
                 </div>
                 <div class="span-info">
                     <span class="span-info-label">Span ID:</span> ${span.spanId}
@@ -304,7 +315,7 @@ function renderTags(tags) {
 
     let html = '<div class="span-tags"><strong>Tags:</strong> ';
     for (const [key, value] of Object.entries(tags)) {
-        html += `<span class="span-tag"><span class="span-tag-key">${key}:</span> ${value}</span>`;
+        html += `<span class="span-tag"><span class="span-tag-key">${escapeHtml(key)}:</span> ${escapeHtml(value)}</span>`;
     }
     html += '</div>';
     return html;
@@ -318,7 +329,7 @@ function renderMetrics(metrics) {
 
     let html = '<div class="span-tags"><strong>Metrics:</strong> ';
     for (const [key, value] of Object.entries(metrics)) {
-        html += `<span class="span-tag"><span class="span-tag-key">${key}:</span> ${value}</span>`;
+        html += `<span class="span-tag"><span class="span-tag-key">${escapeHtml(key)}:</span> ${value}</span>`;
     }
     html += '</div>';
     return html;
