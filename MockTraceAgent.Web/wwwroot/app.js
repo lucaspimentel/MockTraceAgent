@@ -7,6 +7,7 @@ const connection = new signalR.HubConnectionBuilder()
 let selectedTraceId = null;
 let traces = [];
 let urlFilter = '/v0.4/traces';
+let showOnlyNonEmpty = true;
 
 // HTML escape function to prevent XSS
 function escapeHtml(unsafe) {
@@ -92,12 +93,25 @@ async function updateStatistics() {
     }
 }
 
-// Get filtered traces based on URL filter
+// Get filtered traces based on URL filter and empty payload filter
 function getFilteredTraces() {
-    if (!urlFilter) {
-        return traces;
+    let filtered = traces;
+
+    // Apply URL filter
+    if (urlFilter) {
+        filtered = filtered.filter(trace => trace.url.includes(urlFilter));
     }
-    return traces.filter(trace => trace.url.includes(urlFilter));
+
+    // Apply non-empty filter
+    if (showOnlyNonEmpty) {
+        filtered = filtered.filter(trace => {
+            const isTraceEndpoint = trace.url.includes('/v0.4/traces');
+            // Keep non-trace endpoints, and trace endpoints with spans > 0
+            return !isTraceEndpoint || trace.totalSpanCount > 0;
+        });
+    }
+
+    return filtered;
 }
 
 // Render trace list
@@ -115,8 +129,13 @@ function renderTraceList() {
         return;
     }
 
+    // Sort by receivedAt (most recent first)
+    const sortedTraces = [...filteredTraces].sort((a, b) => {
+        return new Date(b.receivedAt) - new Date(a.receivedAt);
+    });
+
     traceList.innerHTML = '';
-    filteredTraces.forEach(trace => {
+    sortedTraces.forEach(trace => {
         addTraceToList(trace);
     });
 }
@@ -125,9 +144,15 @@ function renderTraceList() {
 function addTraceToList(trace) {
     const traceList = document.getElementById('traceList');
 
-    // Check if trace matches current filter
+    // Check if trace matches current filters
     if (urlFilter && !trace.url.includes(urlFilter)) {
-        return; // Skip this trace if it doesn't match the filter
+        return; // Skip this trace if it doesn't match the URL filter
+    }
+
+    // Check non-empty filter
+    const isTraceEndpoint = trace.url.includes('/v0.4/traces');
+    if (showOnlyNonEmpty && isTraceEndpoint && trace.totalSpanCount === 0) {
+        return; // Skip empty trace payloads if showing only non-empty
     }
 
     // Remove empty message if present
@@ -145,7 +170,6 @@ function addTraceToList(trace) {
     }
 
     // Add class for empty payloads (zero spans) or non-trace endpoints
-    const isTraceEndpoint = trace.url.includes('/v0.4/traces');
     if (!isTraceEndpoint || (isTraceEndpoint && trace.totalSpanCount === 0)) {
         traceItem.classList.add('empty-payload');
     }
@@ -161,7 +185,6 @@ function addTraceToList(trace) {
 
     traceItem.innerHTML = `
         <div class="trace-item-header">
-            <span class="trace-id">${escapeHtml(trace.id.substring(0, 8))}</span>
             <span class="trace-time">${escapeHtml(trace.receivedAt)}</span>
         </div>
         <div class="trace-item-info">
@@ -200,36 +223,16 @@ async function selectTrace(traceId) {
 // Display trace details
 function displayTraceDetails(trace) {
     const detailsPanel = document.getElementById('traceDetails');
+    const isTraceEndpoint = trace.url.includes('/v0.4/traces');
+
+    // Only show details for trace endpoints
+    if (!isTraceEndpoint) {
+        detailsPanel.innerHTML = '<p class="empty-message">Select a trace payload to view details</p>';
+        return;
+    }
 
     detailsPanel.innerHTML = `
-        <h3>Trace Details</h3>
-
-        <div class="trace-info">
-            <div class="trace-info-row">
-                <span class="trace-info-label">Trace ID:</span>
-                <span class="trace-info-value">${escapeHtml(trace.id)}</span>
-            </div>
-            <div class="trace-info-row">
-                <span class="trace-info-label">Received At:</span>
-                <span class="trace-info-value">${escapeHtml(trace.receivedAt)}</span>
-            </div>
-            <div class="trace-info-row">
-                <span class="trace-info-label">URL:</span>
-                <span class="trace-info-value">${escapeHtml(trace.url)}</span>
-            </div>
-            <div class="trace-info-row">
-                <span class="trace-info-label">Content Length:</span>
-                <span class="trace-info-value">${formatBytes(trace.contentLength)}</span>
-            </div>
-            <div class="trace-info-row">
-                <span class="trace-info-label">Trace Chunks:</span>
-                <span class="trace-info-value">${trace.traceChunkCount}</span>
-            </div>
-            <div class="trace-info-row">
-                <span class="trace-info-label">Total Spans:</span>
-                <span class="trace-info-value">${trace.totalSpanCount}</span>
-            </div>
-        </div>
+        <h3>Payload Details</h3>
 
         <div class="actions">
             <a href="/api/traces/${escapeHtml(trace.id)}/raw" class="btn" download="trace-${escapeHtml(trace.id)}.bin">Download Raw MessagePack</a>
@@ -246,7 +249,7 @@ function displayTraceDetails(trace) {
         </div>
 
         <div class="tab-content" id="tab-json">
-            <div class="json-viewer">${trace.traceChunks ? syntaxHighlight(JSON.stringify(trace.traceChunks, null, 2)) : 'No data'}</div>
+            <pre class="json-viewer">${trace.traceChunks ? syntaxHighlight(JSON.stringify(trace.traceChunks, null, 2)) : 'No data'}</pre>
         </div>
     `;
 
@@ -419,6 +422,34 @@ function setupUrlFilter() {
     });
 }
 
+// Setup non-empty payload filter
+function setupNonEmptyPayloadFilter() {
+    const showOnlyNonEmptyCheckbox = document.getElementById('showOnlyNonEmpty');
+    const urlFilterInput = document.getElementById('urlFilter');
+
+    // Set initial state
+    if (showOnlyNonEmptyCheckbox.checked) {
+        urlFilterInput.disabled = true;
+    }
+
+    showOnlyNonEmptyCheckbox.addEventListener('change', (e) => {
+        showOnlyNonEmpty = e.target.checked;
+
+        // When checked, set URL filter to /v0.4/traces and disable textbox
+        if (e.target.checked) {
+            urlFilter = '/v0.4/traces';
+            urlFilterInput.value = '/v0.4/traces';
+            urlFilterInput.disabled = true;
+        } else {
+            // When unchecked, enable textbox
+            urlFilterInput.disabled = false;
+        }
+
+        renderTraceList();
+    });
+}
+
 // Initialize
 setupUrlFilter();
+setupNonEmptyPayloadFilter();
 startConnection();
