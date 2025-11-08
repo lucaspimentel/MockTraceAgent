@@ -193,9 +193,23 @@ function addTraceToList(trace) {
         <div class="trace-item-info">
             ${statsHtml}
         </div>
+        <div class="trace-item-actions">
+            <a href="/api/traces/${escapeHtml(trace.id)}/raw" class="trace-item-btn" download="trace-${escapeHtml(trace.id)}.bin" title="Download Raw MessagePack">
+                <span>📦 Raw</span>
+            </a>
+            <a href="/api/traces/${escapeHtml(trace.id)}/json" class="trace-item-btn" download="trace-${escapeHtml(trace.id)}.json" title="Download JSON">
+                <span>📄 JSON</span>
+            </a>
+        </div>
     `;
 
-    traceItem.addEventListener('click', () => selectTrace(trace.id));
+    traceItem.addEventListener('click', (e) => {
+        // Don't trigger selection if clicking on download buttons
+        if (e.target.closest('.trace-item-actions')) {
+            return;
+        }
+        selectTrace(trace.id);
+    });
 
     // Add to top of list
     traceList.insertBefore(traceItem, traceList.firstChild);
@@ -233,11 +247,6 @@ function displayTraceDetails(trace) {
 
     detailsPanel.innerHTML = `
         <h3>Payload Details</h3>
-
-        <div class="actions">
-            <a href="/api/traces/${escapeHtml(trace.id)}/raw" class="btn" download="trace-${escapeHtml(trace.id)}.bin">Download Raw MessagePack</a>
-            <a href="/api/traces/${escapeHtml(trace.id)}/json" class="btn btn-secondary" download="trace-${escapeHtml(trace.id)}.json">Download JSON</a>
-        </div>
 
         <div class="tabs">
             <div class="tab active" data-tab="spans">Span Hierarchy</div>
