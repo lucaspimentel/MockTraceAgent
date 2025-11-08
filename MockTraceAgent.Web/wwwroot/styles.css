@@ -383,3 +383,172 @@ header h1 {
 .tab-content.active {
     display: block;
 }
+
+/* Drilldown container */
+.drilldown-container {
+    display: flex;
+    gap: 1rem;
+    height: 600px;
+}
+
+.drilldown-pane {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: white;
+}
+
+.drilldown-pane h4 {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    background: #ecf0f1;
+    border-bottom: 1px solid #ddd;
+    font-size: 1rem;
+    color: #2c3e50;
+}
+
+.drilldown-pane > div {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+/* Chunks pane */
+.chunks-pane {
+    max-width: 300px;
+}
+
+.chunk-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chunk-item:hover {
+    background: #e8f4f8;
+    border-color: #3498db;
+}
+
+.chunk-item.selected {
+    background: #d4e6f1;
+    border-color: #3498db;
+    border-width: 2px;
+}
+
+.chunk-info {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+}
+
+.chunk-label {
+    font-weight: bold;
+    color: #555;
+    margin-right: 0.5rem;
+}
+
+.chunk-value {
+    font-family: monospace;
+    color: #2c3e50;
+}
+
+/* Span tree pane */
+.span-tree-list {
+    padding: 0.5rem;
+}
+
+.span-tree-node {
+    margin-bottom: 0.25rem;
+    cursor: pointer;
+}
+
+.span-tree-node.error .span-tree-item {
+    border-left: 3px solid #e74c3c;
+}
+
+.span-tree-item {
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.span-tree-node:hover .span-tree-item {
+    background: #e8f4f8;
+    border-color: #3498db;
+}
+
+.span-tree-node.selected .span-tree-item {
+    background: #d4e6f1;
+    border-color: #3498db;
+    border-width: 2px;
+}
+
+.span-tree-service {
+    font-weight: bold;
+    color: #2c3e50;
+    min-width: 100px;
+}
+
+.span-tree-resource {
+    flex: 1;
+    color: #555;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.span-tree-duration {
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    min-width: 80px;
+    text-align: right;
+}
+
+/* Span details pane */
+.span-detail-section {
+    margin-bottom: 1.5rem;
+}
+
+.span-detail-section h5 {
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #ddd;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.span-detail-row {
+    display: flex;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.span-detail-label {
+    font-weight: bold;
+    min-width: 120px;
+    color: #555;
+}
+
+.span-detail-value {
+    color: #2c3e50;
+    word-break: break-word;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+}
+
+.error-text {
+    color: #e74c3c;
+    font-weight: bold;
+}

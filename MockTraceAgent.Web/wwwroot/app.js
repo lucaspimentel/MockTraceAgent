@@ -245,7 +245,7 @@ function displayTraceDetails(trace) {
         </div>
 
         <div class="tab-content active" id="tab-spans">
-            ${trace.traceChunks ? renderSpanHierarchy(trace.traceChunks) : '<p>No span data available</p>'}
+            ${trace.traceChunks ? renderSpanHierarchyDrilldown(trace.traceChunks) : '<p>No span data available</p>'}
         </div>
 
         <div class="tab-content" id="tab-json">
@@ -265,9 +265,273 @@ function displayTraceDetails(trace) {
             document.getElementById(`tab-${tabName}`).classList.add('active');
         });
     });
+
+    // Setup drilldown event handlers
+    setupDrilldownHandlers(trace.traceChunks);
 }
 
-// Render span hierarchy
+// Setup event handlers for span hierarchy drilldown
+function setupDrilldownHandlers(traceChunks) {
+    if (!traceChunks) return;
+
+    // Store trace chunks for later access
+    window.currentTraceChunks = traceChunks;
+
+    // Chunk selection handler
+    setTimeout(() => {
+        document.querySelectorAll('.chunk-item').forEach(item => {
+            item.addEventListener('click', () => {
+                // Remove previous selection
+                document.querySelectorAll('.chunk-item').forEach(i => i.classList.remove('selected'));
+                // Add selection to clicked item
+                item.classList.add('selected');
+
+                const chunkIndex = parseInt(item.dataset.chunkIndex);
+                const chunk = traceChunks[chunkIndex];
+
+                // Render span tree
+                const spanTreeDiv = document.getElementById('spanTree');
+                spanTreeDiv.innerHTML = renderSpanTree(chunk);
+
+                // Clear span details
+                document.getElementById('spanDetails').innerHTML = '<p class="empty-message">Select a span to view details</p>';
+
+                // Store current chunk
+                window.currentChunk = chunk;
+
+                // Setup span tree click handlers
+                setupSpanTreeHandlers();
+            });
+        });
+    }, 0);
+}
+
+// Setup event handlers for span tree nodes
+function setupSpanTreeHandlers() {
+    document.querySelectorAll('.span-tree-node').forEach(node => {
+        node.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            // Remove previous selection
+            document.querySelectorAll('.span-tree-node').forEach(n => n.classList.remove('selected'));
+            // Add selection to clicked node
+            node.classList.add('selected');
+
+            const spanId = node.dataset.spanId;
+            const span = findSpanById(window.currentChunk, spanId);
+
+            if (span) {
+                // Render span details
+                const spanDetailsDiv = document.getElementById('spanDetails');
+                spanDetailsDiv.innerHTML = renderSpanDetails(span);
+            }
+        });
+    });
+}
+
+// Find span by ID in chunk
+function findSpanById(chunk, spanId) {
+    return chunk.find(span => span.spanId.toString() === spanId.toString());
+}
+
+// Render span hierarchy drilldown with three panes
+function renderSpanHierarchyDrilldown(traceChunks) {
+    return `
+        <div class="drilldown-container">
+            <div class="drilldown-pane chunks-pane">
+                <h4>Trace Chunks</h4>
+                <div id="chunksList">
+                    ${renderTraceChunksList(traceChunks)}
+                </div>
+            </div>
+            <div class="drilldown-pane spans-pane">
+                <h4>Span Tree</h4>
+                <div id="spanTree">
+                    <p class="empty-message">Select a trace chunk to view spans</p>
+                </div>
+            </div>
+            <div class="drilldown-pane span-details-pane">
+                <h4>Span Details</h4>
+                <div id="spanDetails">
+                    <p class="empty-message">Select a span to view details</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Render list of trace chunks
+function renderTraceChunksList(traceChunks) {
+    let html = '';
+    traceChunks.forEach((chunk, chunkIndex) => {
+        const traceId = chunk[0]?.traceId || 'N/A';
+        const spanCount = chunk.length;
+        html += `
+            <div class="chunk-item" data-chunk-index="${chunkIndex}">
+                <div class="chunk-info">
+                    <span class="chunk-label">Trace ID:</span>
+                    <span class="chunk-value">${traceId}</span>
+                </div>
+                <div class="chunk-info">
+                    <span class="chunk-label">Spans:</span>
+                    <span class="chunk-value">${spanCount}</span>
+                </div>
+            </div>
+        `;
+    });
+    return html;
+}
+
+// Render span tree for a selected chunk
+function renderSpanTree(chunk) {
+    // Build parent-child relationships
+    const spanMap = new Map();
+    const rootSpans = [];
+
+    chunk.forEach(span => {
+        spanMap.set(span.spanId, { ...span, children: [] });
+    });
+
+    chunk.forEach(span => {
+        const spanNode = spanMap.get(span.spanId);
+        if (span.parentId && spanMap.has(span.parentId)) {
+            spanMap.get(span.parentId).children.push(spanNode);
+        } else {
+            rootSpans.push(spanNode);
+        }
+    });
+
+    // Render tree
+    let html = '<div class="span-tree-list">';
+    rootSpans.forEach(span => {
+        html += renderSpanTreeNode(span, 0);
+    });
+    html += '</div>';
+    return html;
+}
+
+// Render minimal span node for tree view
+function renderSpanTreeNode(span, depth) {
+    const duration = formatDuration(span.duration);
+    const errorClass = span.error ? 'error' : '';
+
+    let html = `
+        <div class="span-tree-node ${errorClass}" style="margin-left: ${depth * 1.5}rem;" data-span-id="${span.spanId}">
+            <div class="span-tree-item">
+                <span class="span-tree-service">${escapeHtml(span.service) || 'N/A'}</span>
+                <span class="span-tree-resource">${escapeHtml(span.resource) || 'N/A'}</span>
+                <span class="span-tree-duration">${duration}</span>
+            </div>
+        </div>
+    `;
+
+    // Render children
+    if (span.children && span.children.length > 0) {
+        span.children.forEach(child => {
+            html += renderSpanTreeNode(child, depth + 1);
+        });
+    }
+
+    return html;
+}
+
+// Render full span details
+function renderSpanDetails(span) {
+    const duration = formatDuration(span.duration);
+    const startTime = new Date(span.start / 1000000).toISOString();
+
+    let html = `
+        <div class="span-detail-section">
+            <div class="span-detail-row">
+                <span class="span-detail-label">Service:</span>
+                <span class="span-detail-value">${escapeHtml(span.service) || 'N/A'}</span>
+            </div>
+            <div class="span-detail-row">
+                <span class="span-detail-label">Resource:</span>
+                <span class="span-detail-value">${escapeHtml(span.resource) || 'N/A'}</span>
+            </div>
+            <div class="span-detail-row">
+                <span class="span-detail-label">Name:</span>
+                <span class="span-detail-value">${escapeHtml(span.name) || 'unnamed'}</span>
+            </div>
+            <div class="span-detail-row">
+                <span class="span-detail-label">Type:</span>
+                <span class="span-detail-value">${escapeHtml(span.type) || 'N/A'}</span>
+            </div>
+            <div class="span-detail-row">
+                <span class="span-detail-label">Span ID:</span>
+                <span class="span-detail-value">${span.spanId}</span>
+            </div>
+            <div class="span-detail-row">
+                <span class="span-detail-label">Trace ID:</span>
+                <span class="span-detail-value">${span.traceId}</span>
+            </div>
+            ${span.parentId ? `
+            <div class="span-detail-row">
+                <span class="span-detail-label">Parent ID:</span>
+                <span class="span-detail-value">${span.parentId}</span>
+            </div>
+            ` : ''}
+            <div class="span-detail-row">
+                <span class="span-detail-label">Start:</span>
+                <span class="span-detail-value">${startTime}</span>
+            </div>
+            <div class="span-detail-row">
+                <span class="span-detail-label">Duration:</span>
+                <span class="span-detail-value">${duration}</span>
+            </div>
+            <div class="span-detail-row">
+                <span class="span-detail-label">Error:</span>
+                <span class="span-detail-value ${span.error ? 'error-text' : ''}">${span.error ? 'Yes' : 'No'}</span>
+            </div>
+        </div>
+
+        ${renderTagsSection(span.tags)}
+        ${renderMetricsSection(span.metrics)}
+    `;
+
+    return html;
+}
+
+// Render tags section for span details
+function renderTagsSection(tags) {
+    if (!tags || Object.keys(tags).length === 0) {
+        return '';
+    }
+
+    let html = '<div class="span-detail-section"><h5>Tags</h5>';
+    for (const [key, value] of Object.entries(tags)) {
+        html += `
+            <div class="span-detail-row">
+                <span class="span-detail-label">${escapeHtml(key)}:</span>
+                <span class="span-detail-value">${escapeHtml(value)}</span>
+            </div>
+        `;
+    }
+    html += '</div>';
+    return html;
+}
+
+// Render metrics section for span details
+function renderMetricsSection(metrics) {
+    if (!metrics || Object.keys(metrics).length === 0) {
+        return '';
+    }
+
+    let html = '<div class="span-detail-section"><h5>Metrics</h5>';
+    for (const [key, value] of Object.entries(metrics)) {
+        html += `
+            <div class="span-detail-row">
+                <span class="span-detail-label">${escapeHtml(key)}:</span>
+                <span class="span-detail-value">${value}</span>
+            </div>
+        `;
+    }
+    html += '</div>';
+    return html;
+}
+
+// Old render span hierarchy (keeping for compatibility)
 function renderSpanHierarchy(traceChunks) {
     let html = '<div class="span-tree">';
 
