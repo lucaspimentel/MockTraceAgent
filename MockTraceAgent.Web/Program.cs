@@ -46,7 +46,7 @@ app.MapGet("/api/traces/{id}/raw", (string id, TraceStorageService storage) =>
 app.MapGet("/api/traces/{id}/json", (string id, TraceStorageService storage) =>
 {
     var json = storage.GetJson(id);
-    return json != null ? Results.Content(json, "application/json", System.Text.Encoding.UTF8, $"trace-{id}.json") : Results.NotFound();
+    return json != null ? Results.Content(json, "application/json") : Results.NotFound();
 });
 app.MapGet("/api/stats", (TraceStorageService storage) => storage.GetStatistics());
 
