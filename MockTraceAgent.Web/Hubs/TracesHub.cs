@@ -4,8 +4,8 @@ namespace MockTraceAgent.Web.Hubs;
 
 public class TracesHub : Hub
 {
-    public async Task SendTraceUpdate(string message)
+    public async Task SendPayloadUpdate(string message)
     {
-        await Clients.All.SendAsync("ReceiveTraceUpdate", message);
+        await Clients.All.SendAsync("ReceivePayloadUpdate", message);
     }
 }

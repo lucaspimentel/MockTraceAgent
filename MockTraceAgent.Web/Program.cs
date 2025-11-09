@@ -17,16 +17,16 @@ app.UseStaticFiles();
 app.MapHub<TracesHub>("/hubs/traces");
 
 // API endpoints
-app.MapGet("/api/traces", (TraceStorageService storage) => storage.GetAllTraces());
-app.MapGet("/api/traces/{id}", (string id, TraceStorageService storage) =>
+app.MapGet("/api/payloads", (TraceStorageService storage) => storage.GetAllTraces());
+app.MapGet("/api/payloads/{id}", (string id, TraceStorageService storage) =>
 {
-    var trace = storage.GetTrace(id);
+    var trace = storage.GetTracePayload(id);
     if (trace == null)
     {
         return Results.NotFound();
     }
 
-    // Return trace without raw bytes (those are available via /api/traces/{id}/raw)
+    // Return trace without raw bytes (those are available via /api/payloads/{id}/raw)
     return Results.Ok(new
     {
         trace.Id,
@@ -38,12 +38,12 @@ app.MapGet("/api/traces/{id}", (string id, TraceStorageService storage) =>
         trace.TotalSpanCount
     });
 });
-app.MapGet("/api/traces/{id}/raw", (string id, TraceStorageService storage) =>
+app.MapGet("/api/payloads/{id}/raw", (string id, TraceStorageService storage) =>
 {
     var rawBytes = storage.GetRawBytes(id);
-    return rawBytes != null ? Results.File(rawBytes, "application/octet-stream", $"trace-{id}.bin") : Results.NotFound();
+    return rawBytes != null ? Results.File(rawBytes, "application/octet-stream", $"payload-{id}.bin") : Results.NotFound();
 });
-app.MapGet("/api/traces/{id}/json", (string id, TraceStorageService storage) =>
+app.MapGet("/api/payloads/{id}/json", (string id, TraceStorageService storage) =>
 {
     var json = storage.GetJson(id);
     return json != null ? Results.Content(json, "application/json") : Results.NotFound();

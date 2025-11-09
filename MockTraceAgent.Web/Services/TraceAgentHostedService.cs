@@ -24,7 +24,7 @@ public class TraceAgentHostedService : IHostedService, IDisposable
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        var port = _configuration.GetValue<int>("TraceAgentPort", 8126);
+        var port = _configuration.GetValue("TraceAgentPort", 8126);
 
         _logger.LogInformation("Starting TraceAgent on port {Port}", port);
 

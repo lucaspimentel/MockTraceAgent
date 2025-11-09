@@ -9,10 +9,10 @@ namespace MockTraceAgent.Web.Services;
 
 public class TraceStorageService
 {
-    private readonly ConcurrentDictionary<string, TraceData> _traces = new();
+    private readonly ConcurrentDictionary<string, PayloadData> _tracePayloads = new();
     private readonly IHubContext<TracesHub> _hubContext;
     private readonly ILogger<TraceStorageService> _logger;
-    private long _totalBytes = 0;
+    private long _totalBytes;
 
     public TraceStorageService(IHubContext<TracesHub> hubContext, ILogger<TraceStorageService> logger)
     {
@@ -47,7 +47,7 @@ public class TraceStorageService
                 _logger.LogWarning(ex, "Failed to deserialize trace data for URL {Url}", url);
             }
 
-            var traceData = new TraceData
+            var traceData = new PayloadData
             {
                 Id = id,
                 ReceivedAt = receivedAt,
@@ -59,7 +59,7 @@ public class TraceStorageService
                 TotalSpanCount = totalSpanCount
             };
 
-            _traces[id] = traceData;
+            _tracePayloads[id] = traceData;
             Interlocked.Add(ref _totalBytes, contentLength);
 
             // Broadcast to all connected clients
@@ -85,7 +85,7 @@ public class TraceStorageService
 
     public IEnumerable<object> GetAllTraces()
     {
-        return _traces.Values
+        return _tracePayloads.Values
             .OrderByDescending(t => t.ReceivedAt)
             .Select(t => new
             {
@@ -98,20 +98,20 @@ public class TraceStorageService
             });
     }
 
-    public TraceData? GetTrace(string id)
+    public PayloadData? GetTracePayload(string id)
     {
-        _traces.TryGetValue(id, out var trace);
+        _tracePayloads.TryGetValue(id, out var trace);
         return trace;
     }
 
     public byte[]? GetRawBytes(string id)
     {
-        return _traces.TryGetValue(id, out var trace) ? trace.RawBytes : null;
+        return _tracePayloads.TryGetValue(id, out var trace) ? trace.RawBytes : null;
     }
 
     public string? GetJson(string id)
     {
-        if (_traces.TryGetValue(id, out var trace) && trace.RawBytes.Length > 0)
+        if (_tracePayloads.TryGetValue(id, out var trace) && trace.RawBytes.Length > 0)
         {
             try
             {
@@ -126,10 +126,10 @@ public class TraceStorageService
         return null;
     }
 
-    public TraceStatistics GetStatistics()
+    public PayloadStatistics GetStatistics()
     {
-        var traces = _traces.Values.ToList();
-        return new TraceStatistics
+        var traces = _tracePayloads.Values.ToList();
+        return new PayloadStatistics
         {
             TotalTraces = traces.Count,
             TotalSpans = traces.Sum(t => t.TotalSpanCount),

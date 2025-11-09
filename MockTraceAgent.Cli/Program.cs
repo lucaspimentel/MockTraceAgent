@@ -1,4 +1,4 @@
-﻿using MockTraceAgent;
+﻿using MockTraceAgent.Cli;
 using Spectre.Console.Cli;
 
 var app = new CommandApp<ListenCommand>();

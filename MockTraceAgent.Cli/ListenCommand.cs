@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,7 +8,7 @@ using MessagePack;
 using MockTraceAgent.Core;
 using Spectre.Console.Cli;
 
-namespace MockTraceAgent;
+namespace MockTraceAgent.Cli;
 
 internal sealed class ListenCommand : Command<ListenCommand.Settings>
 {
@@ -37,12 +36,12 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
         [Description($"Valid options: {nameof(SaveOptions.None)}, {nameof(SaveOptions.RawBytes)}, {nameof(SaveOptions.ConvertToJson)}, {nameof(SaveOptions.All)}")]
         public SaveOptions SaveFileOptions { get; init; }
 
-        [CommandOption("-f|--url-filter")]
+        [CommandOption("-f|--filter")]
         [DefaultValue("/traces")]
         public string? UrlFilter { get; init; }
     }
 
-    public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings, CancellationToken cancellationToken)
+    public override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var readRequestBytes = settings.ShowCounts || settings.SaveFileOptions != SaveOptions.None;
 
