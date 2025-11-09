@@ -8,11 +8,16 @@ ASP.NET Core web application that provides a browser-based UI for inspecting tra
 
 ## Features
 
-- Real-time trace payload visualization
-- Dual-view interface: payload-centric and trace-aggregated views
-- Hierarchical span tree with parent-child relationships
-- Download payloads as raw MessagePack or JSON
-- REST API for integration
+- **Real-time trace payload visualization** with SignalR push updates
+- **Dual-view interface**:
+  - Payloads View (4-pane): Drill down through payloads → chunks → spans → details
+  - Traces View (3-pane): Aggregated traces with SVG flamegraph visualization
+- **SVG flamegraph** with time axis, color-coding by service, interactive hover/click
+- **Span details** with IDs, basic info, meta (tags), and metrics - all alphabetically sorted
+- **Monospace fonts** for IDs, URLs, meta keys/values, metrics keys/values
+- **Smart filtering**: URL filtering with non-empty toggle (Payloads), auto-filter (Traces)
+- **Download payloads** as raw MessagePack (.bin) or JSON (.json)
+- **REST API** for programmatic access to payloads and traces
 
 ## Usage
 

@@ -170,13 +170,16 @@ Core components shared between CLI and Web applications:
 
 6. **wwwroot/** - Static web frontend (dual-view UI)
    - **index.html**: Main UI with view switcher and two layouts
-     - **Payloads View (4-pane)**: Payloads → Trace Chunks → Spans → Span Details
-     - **Traces View (3-pane)**: Traces → Span Tree → Span Details
-   - **styles.css**: Responsive layouts for both views
+     - **Payloads View (4-pane)**: Payloads (20%) → Trace Chunks (18%) → Spans (18%) → Span Details (44%)
+     - **Traces View (3-pane)**: Traces (18%) → Flamegraph (flexible) → Span Details (flexible)
+   - **styles.css**: Responsive layouts with optimized column widths
    - **app.js**: JavaScript application logic
      - SignalR client for real-time updates
      - View switching (Payloads/Traces)
-     - Payload list with URL filtering and empty filtering
+     - Payload list with URL filtering (only non-empty payloads)
+     - Traces list (always shows only non-empty traces)
+     - SVG-based flamegraph visualization with time axis
+     - Span details with sorted meta/metrics (alphabetically)
      - Trace chunk and span drill-down (Payloads view)
      - Aggregated trace list with filtering (Traces view)
      - Hierarchical span tree builder with parent-child relationships
@@ -206,8 +209,13 @@ Core components shared between CLI and Web applications:
 5. Web frontend receives SignalR event and updates UI in real-time
 6. User can switch between two views:
    - **Payloads View**: Drill down through payloads → chunks → spans → details
-   - **Traces View**: Explore aggregated traces with hierarchical span trees
-7. User can download raw MessagePack or JSON for any payload
+   - **Traces View**: Explore aggregated traces with SVG flamegraph visualization
+7. Span details display:
+   - IDs section (trace ID, span ID, parent ID) - monospace font
+   - Basic info section
+   - Meta section (formerly "tags") - sorted alphabetically, monospace font
+   - Metrics section - sorted alphabetically, monospace font
+8. User can download raw MessagePack or JSON for any payload
 
 ### Datadog Trace Format
 
@@ -225,29 +233,35 @@ The web frontend provides a dual-view interface:
 
 ### Payloads View (4-pane Layout)
 Inspect raw payload data as received from the tracer:
-1. **Payloads List**: All received payloads with timestamp, URL, size
-   - URL filtering (e.g., `/v0.4/traces`)
+1. **Payloads List** (20% width): All received payloads with timestamp, URL, size
+   - URL filtering with monospace font display (e.g., `/v0.4/traces`)
    - Toggle to show/hide empty payloads
-   - Download buttons for raw/JSON
-2. **Trace Chunks**: Chunks within selected payload
-3. **Spans**: Individual spans within selected chunk
-4. **Span Details**: Full details for selected span
+   - Filter section visually distinct with darker background
+   - URLs displayed in monospace font
+2. **Trace Chunks** (18% width): Chunks within selected payload
+   - Shows trace ID (monospace) and span count
+3. **Spans** (18% width): Individual spans within selected chunk
+4. **Span Details** (44% width): Full details for selected span
+   - IDs section at top with monospace font
+   - Meta (formerly "tags") - alphabetically sorted, monospace
+   - Metrics - alphabetically sorted, monospace
 
 ### Traces View (3-pane Layout)
 Explore aggregated traces across all payloads:
-1. **Traces List**: All unique traces aggregated by trace ID
-   - Shows first/last seen timestamps
-   - Span count per trace
-   - Toggle to show/hide empty traces
-2. **Span Tree**: Hierarchical tree showing parent-child relationships
-   - Visual indentation for nesting levels
-   - Color-coded error highlighting
-   - Duration display in human-readable format
-3. **Span Details**: Full information for selected span
-   - Service, resource, type, and IDs
-   - Tags (metadata) and metrics
-   - Start time and duration
-   - Error indicators
+1. **Traces List** (18% width): All unique traces aggregated by trace ID
+   - Shows trace ID (monospace), span count, last seen timestamp
+   - Always shows only non-empty traces (no filter needed)
+2. **Flamegraph** (flexible width): SVG-based visualization
+   - Horizontal bars representing span duration
+   - Time axis showing duration markers (0ms → total duration)
+   - Color-coded by service (errors in red)
+   - Interactive hover effects and click to select
+   - Hierarchical parent-child relationships
+   - Text labels for wider bars (>50px)
+   - Tooltips with span information
+3. **Span Details** (flexible width): Full information for selected span
+   - Same structure as Payloads view
+   - IDs, basic info, meta (sorted), metrics (sorted)
 
 ### Common Features
 - **Real-time Updates**: SignalR-based push notifications for new payloads
