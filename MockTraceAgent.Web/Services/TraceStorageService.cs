@@ -10,6 +10,7 @@ namespace MockTraceAgent.Web.Services;
 public class TraceStorageService
 {
     private readonly ConcurrentDictionary<string, PayloadData> _tracePayloads = new();
+    private readonly ConcurrentDictionary<ulong, TraceData> _traces = new();
     private readonly IHubContext<TracesHub> _hubContext;
     private readonly ILogger<TraceStorageService> _logger;
     private long _totalBytes;
@@ -61,6 +62,35 @@ public class TraceStorageService
 
             _tracePayloads[id] = traceData;
             Interlocked.Add(ref _totalBytes, contentLength);
+
+            // Aggregate spans by trace ID
+            if (traceChunks != null && url == "/v0.4/traces")
+            {
+                foreach (var chunk in traceChunks)
+                {
+                    foreach (var span in chunk)
+                    {
+                        _traces.AddOrUpdate(
+                            span.TraceId,
+                            _ => new TraceData
+                            {
+                                TraceId = span.TraceId,
+                                Spans = [span],
+                                FirstSeen = receivedAt,
+                                LastSeen = receivedAt
+                            },
+                            (_, existingTrace) =>
+                            {
+                                existingTrace.Spans.Add(span);
+                                if (receivedAt < existingTrace.FirstSeen)
+                                    existingTrace.FirstSeen = receivedAt;
+                                if (receivedAt > existingTrace.LastSeen)
+                                    existingTrace.LastSeen = receivedAt;
+                                return existingTrace;
+                            });
+                    }
+                }
+            }
 
             // Broadcast to all connected clients
             await _hubContext.Clients.All.SendAsync("ReceiveTrace", new
@@ -137,5 +167,24 @@ public class TraceStorageService
             FirstTraceAt = traces.MinBy(t => t.ReceivedAt)?.ReceivedAt,
             LastTraceAt = traces.MaxBy(t => t.ReceivedAt)?.ReceivedAt
         };
+    }
+
+    public IEnumerable<object> GetAllAggregatedTraces()
+    {
+        return _traces.Values
+            .OrderByDescending(t => t.LastSeen)
+            .Select(t => new
+            {
+                traceId = t.TraceId.ToString(),
+                spanCount = t.SpanCount,
+                firstSeen = t.FirstSeen.ToString("yyyy-MM-dd HH:mm:ss.ff"),
+                lastSeen = t.LastSeen.ToString("yyyy-MM-dd HH:mm:ss.ff")
+            });
+    }
+
+    public TraceData? GetAggregatedTrace(ulong traceId)
+    {
+        _traces.TryGetValue(traceId, out var trace);
+        return trace;
     }
 }

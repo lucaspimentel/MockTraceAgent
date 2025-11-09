@@ -50,4 +50,29 @@ app.MapGet("/api/payloads/{id}/json", (string id, TraceStorageService storage) =
 });
 app.MapGet("/api/stats", (TraceStorageService storage) => storage.GetStatistics());
 
+// Aggregated traces endpoints
+app.MapGet("/api/traces", (TraceStorageService storage) => storage.GetAllAggregatedTraces());
+app.MapGet("/api/traces/{traceId}", (string traceId, TraceStorageService storage) =>
+{
+    if (!ulong.TryParse(traceId, out var id))
+    {
+        return Results.BadRequest("Invalid trace ID format");
+    }
+
+    var trace = storage.GetAggregatedTrace(id);
+    if (trace == null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(new
+    {
+        traceId = trace.TraceId.ToString(),
+        spans = trace.Spans,
+        spanCount = trace.SpanCount,
+        firstSeen = trace.FirstSeen.ToString("yyyy-MM-dd HH:mm:ss.ff"),
+        lastSeen = trace.LastSeen.ToString("yyyy-MM-dd HH:mm:ss.ff")
+    });
+});
+
 app.Run();
