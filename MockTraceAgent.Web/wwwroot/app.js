@@ -334,6 +334,271 @@ function renderPayloadSpanDetails(span) {
     details.innerHTML = html;
 }
 
+// ============================================================================
+// TRACES VIEW
+// ============================================================================
+
+// Load traces from backend
+async function loadTraces() {
+    try {
+        const response = await fetch('/api/traces');
+        traces = await response.json();
+        renderTraceList();
+    } catch (err) {
+        console.error("Error loading traces:", err);
+    }
+}
+
+// Render trace list
+function renderTraceList() {
+    const list = document.getElementById('traceList');
+
+    let filtered = traces;
+    if (showOnlyNonEmptyTraces) {
+        filtered = filtered.filter(t => t.spanCount > 0);
+    }
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<p class="empty-message">No traces match filters</p>';
+        return;
+    }
+
+    list.innerHTML = '';
+    filtered.forEach(trace => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        if (selectedTraceId === trace.traceId) {
+            item.classList.add('selected');
+        }
+
+        item.innerHTML = `
+            <div class="item-info"><strong>Trace ID:</strong> ${escapeHtml(trace.traceId)}</div>
+            <div class="item-stats">${trace.spanCount} spans</div>
+            <div class="item-time">${escapeHtml(trace.lastSeen)}</div>
+        `;
+
+        item.addEventListener('click', () => selectTrace(trace.traceId));
+        list.appendChild(item);
+    });
+}
+
+// Select a trace
+async function selectTrace(traceId) {
+    selectedTraceId = traceId;
+    selectedTraceSpanId = null;
+
+    // Update UI
+    renderTraceList();
+
+    // Load trace details
+    try {
+        const response = await fetch(`/api/traces/${traceId}`);
+        const trace = await response.json();
+        renderSpanTree(trace.spans);
+    } catch (err) {
+        console.error("Error loading trace details:", err);
+    }
+
+    // Clear span details
+    document.getElementById('traceSpanDetails').innerHTML = '<p class="empty-message">Select a span</p>';
+}
+
+// Render span tree (hierarchical)
+function renderSpanTree(spans) {
+    const list = document.getElementById('spanTreeList');
+
+    if (!spans || spans.length === 0) {
+        list.innerHTML = '<p class="empty-message">No spans in trace</p>';
+        return;
+    }
+
+    // Build parent-child relationships
+    const spanMap = new Map();
+    const rootSpans = [];
+
+    spans.forEach(span => {
+        spanMap.set(span.spanId, { ...span, children: [] });
+    });
+
+    spans.forEach(span => {
+        const spanNode = spanMap.get(span.spanId);
+        if (span.parentId && spanMap.has(span.parentId)) {
+            spanMap.get(span.parentId).children.push(spanNode);
+        } else {
+            rootSpans.push(spanNode);
+        }
+    });
+
+    // Render tree
+    list.innerHTML = '';
+    rootSpans.forEach(span => {
+        renderSpanTreeNode(span, 0, list);
+    });
+}
+
+// Render individual span tree node
+function renderSpanTreeNode(span, depth, container) {
+    const item = document.createElement('div');
+    item.className = 'list-item span-tree-node';
+    item.style.marginLeft = `${depth * 1.5}rem`;
+    if (selectedTraceSpanId === span.spanId) {
+        item.classList.add('selected');
+    }
+    if (span.error) {
+        item.classList.add('error');
+    }
+
+    item.innerHTML = `
+        <div class="span-header">
+            <span class="span-service">${escapeHtml(span.service) || 'N/A'}</span>
+            <span class="span-duration">${formatDuration(span.duration)}</span>
+        </div>
+        <div class="span-resource">${escapeHtml(span.resource) || 'N/A'}</div>
+    `;
+
+    item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectTraceSpan(span);
+    });
+
+    container.appendChild(item);
+
+    // Render children
+    if (span.children && span.children.length > 0) {
+        span.children.forEach(child => {
+            renderSpanTreeNode(child, depth + 1, container);
+        });
+    }
+}
+
+// Select a span from trace view
+function selectTraceSpan(span) {
+    selectedTraceSpanId = span.spanId;
+
+    // Update UI - need to re-render entire tree to update selection
+    document.querySelectorAll('#spanTreeList .list-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    event.target.closest('.list-item')?.classList.add('selected');
+
+    renderTraceSpanDetails(span);
+}
+
+// Render span details for trace view
+function renderTraceSpanDetails(span) {
+    const details = document.getElementById('traceSpanDetails');
+
+    const startTime = new Date(span.start / 1000000).toISOString();
+
+    let html = `
+        <div class="detail-section">
+            <h4>Basic Info</h4>
+            <div class="detail-row"><span class="detail-label">Service:</span><span class="detail-value">${escapeHtml(span.service) || 'N/A'}</span></div>
+            <div class="detail-row"><span class="detail-label">Resource:</span><span class="detail-value">${escapeHtml(span.resource) || 'N/A'}</span></div>
+            <div class="detail-row"><span class="detail-label">Name:</span><span class="detail-value">${escapeHtml(span.name) || 'N/A'}</span></div>
+            <div class="detail-row"><span class="detail-label">Type:</span><span class="detail-value">${escapeHtml(span.type) || 'N/A'}</span></div>
+            <div class="detail-row"><span class="detail-label">Duration:</span><span class="detail-value">${formatDuration(span.duration)}</span></div>
+            <div class="detail-row"><span class="detail-label">Start:</span><span class="detail-value">${startTime}</span></div>
+            <div class="detail-row"><span class="detail-label">Error:</span><span class="detail-value ${span.error ? 'error-text' : ''}">${span.error ? 'Yes' : 'No'}</span></div>
+        </div>
+
+        <div class="detail-section">
+            <h4>IDs</h4>
+            <div class="detail-row"><span class="detail-label">Trace ID:</span><span class="detail-value">${span.traceId}</span></div>
+            <div class="detail-row"><span class="detail-label">Span ID:</span><span class="detail-value">${span.spanId}</span></div>
+            ${span.parentId ? `<div class="detail-row"><span class="detail-label">Parent ID:</span><span class="detail-value">${span.parentId}</span></div>` : ''}
+        </div>
+    `;
+
+    if (span.tags && Object.keys(span.tags).length > 0) {
+        html += '<div class="detail-section"><h4>Tags</h4>';
+        for (const [key, value] of Object.entries(span.tags)) {
+            html += `<div class="detail-row"><span class="detail-label">${escapeHtml(key)}:</span><span class="detail-value">${escapeHtml(value)}</span></div>`;
+        }
+        html += '</div>';
+    }
+
+    if (span.metrics && Object.keys(span.metrics).length > 0) {
+        html += '<div class="detail-section"><h4>Metrics</h4>';
+        for (const [key, value] of Object.entries(span.metrics)) {
+            html += `<div class="detail-row"><span class="detail-label">${escapeHtml(key)}:</span><span class="detail-value">${value}</span></div>`;
+        }
+        html += '</div>';
+    }
+
+    details.innerHTML = html;
+}
+
+// ============================================================================
+// VIEW SWITCHING & FILTERS
+// ============================================================================
+
+function setupViewSwitcher() {
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const view = btn.dataset.view;
+
+            // Update button states
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update view content
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.getElementById(`${view}-view`).classList.add('active');
+
+            // Load data for the selected view
+            if (view === 'traces') {
+                loadTraces();
+            }
+        });
+    });
+}
+
+function setupUrlFilter() {
+    const urlFilterInput = document.getElementById('urlFilter');
+    urlFilterInput.addEventListener('input', (e) => {
+        urlFilter = e.target.value;
+        renderPayloadList();
+    });
+}
+
+function setupPayloadFilter() {
+    const checkbox = document.getElementById('showOnlyNonEmpty');
+    const urlFilterInput = document.getElementById('urlFilter');
+
+    if (checkbox.checked) {
+        urlFilterInput.disabled = true;
+    }
+
+    checkbox.addEventListener('change', (e) => {
+        showOnlyNonEmpty = e.target.checked;
+
+        if (e.target.checked) {
+            urlFilter = '/v0.4/traces';
+            urlFilterInput.value = '/v0.4/traces';
+            urlFilterInput.disabled = true;
+        } else {
+            urlFilterInput.disabled = false;
+        }
+
+        renderPayloadList();
+    });
+}
+
+function setupTraceFilter() {
+    const checkbox = document.getElementById('showOnlyNonEmptyTraces');
+    if (checkbox) {
+        checkbox.addEventListener('change', (e) => {
+            showOnlyNonEmptyTraces = e.target.checked;
+            renderTraceList();
+        });
+    }
+}
+
 // Initialize
+setupViewSwitcher();
+setupUrlFilter();
+setupPayloadFilter();
+setupTraceFilter();
 startConnection();
 
