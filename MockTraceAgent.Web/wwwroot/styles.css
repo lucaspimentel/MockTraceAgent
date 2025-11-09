@@ -107,10 +107,29 @@ header h1 {
     overflow: hidden;
 }
 
-.payload-pane,
-.chunk-pane,
+.payload-pane {
+    flex: 0 0 20%;
+    min-width: 250px;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-right: 1px solid #ddd;
+    overflow: hidden;
+}
+
+.chunk-pane {
+    flex: 0 0 18%;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-right: 1px solid #ddd;
+    overflow: hidden;
+}
+
 .span-pane {
-    flex: 1;
+    flex: 0 0 18%;
+    min-width: 200px;
     display: flex;
     flex-direction: column;
     background: white;
@@ -133,7 +152,16 @@ header h1 {
     overflow: hidden;
 }
 
-.trace-list-pane,
+.trace-list-pane {
+    flex: 0 0 18%;
+    min-width: 250px;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-right: 1px solid #ddd;
+    overflow: hidden;
+}
+
 .span-tree-pane {
     flex: 1;
     display: flex;
@@ -177,16 +205,17 @@ header h1 {
 }
 
 .filter-section {
-    padding: 0.75rem 1rem;
-    background: #f8f9fa;
-    border-bottom: 1px solid #ddd;
+    padding: 1rem;
+    background: #e8ecef;
+    border-bottom: 2px solid #bdc3c7;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .filter-section label {
     display: block;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #555;
+    color: #2c3e50;
     margin-bottom: 0.5rem;
 }
 
@@ -786,6 +815,18 @@ header h1 {
     flex: 1;
     color: #2c3e50;
     word-break: break-word;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+}
+
+.detail-label-monospace {
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+}
+
+.detail-value-monospace {
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+}
+
+.item-info-monospace {
     font-family: 'Courier New', Consolas, Monaco, monospace;
 }
 

@@ -14,7 +14,6 @@ let selectedTraceId = null;
 let selectedTraceSpanId = null;
 let urlFilter = '/v0.4/traces';
 let showOnlyNonEmpty = true;
-let showOnlyNonEmptyTraces = true;
 
 // Current payload state
 let currentTraceChunks = null;
@@ -173,7 +172,7 @@ function renderPayloadList() {
 
         item.innerHTML = `
             <div class="item-time">${escapeHtml(payload.receivedAt)}</div>
-            <div class="item-info">${escapeHtml(payload.url)}</div>
+            <div class="item-info item-info-monospace">${escapeHtml(payload.url)}</div>
             <div class="item-stats">${statsHtml}</div>
         `;
 
@@ -227,7 +226,7 @@ function renderChunkList() {
         const traceId = chunk[0]?.traceId || 'N/A';
 
         item.innerHTML = `
-            <div class="item-info"><strong>Trace ID:</strong> ${traceId}</div>
+            <div class="item-info"><strong>Trace ID:</strong> <span class="item-info-monospace">${traceId}</span></div>
             <div class="item-stats">${chunk.length} spans</div>
         `;
 
@@ -303,6 +302,13 @@ function renderPayloadSpanDetails(span) {
 
     let html = `
         <div class="detail-section">
+            <h4>IDs</h4>
+            <div class="detail-row"><span class="detail-label">Trace ID:</span><span class="detail-value detail-value-monospace">${span.traceId}</span></div>
+            <div class="detail-row"><span class="detail-label">Span ID:</span><span class="detail-value detail-value-monospace">${span.spanId}</span></div>
+            ${span.parentId ? `<div class="detail-row"><span class="detail-label">Parent ID:</span><span class="detail-value detail-value-monospace">${span.parentId}</span></div>` : ''}
+        </div>
+
+        <div class="detail-section">
             <h4>Basic Info</h4>
             <div class="detail-row"><span class="detail-label">Service:</span><span class="detail-value">${escapeHtml(span.service) || 'N/A'}</span></div>
             <div class="detail-row"><span class="detail-label">Resource:</span><span class="detail-value">${escapeHtml(span.resource) || 'N/A'}</span></div>
@@ -312,27 +318,22 @@ function renderPayloadSpanDetails(span) {
             <div class="detail-row"><span class="detail-label">Start:</span><span class="detail-value">${startTime}</span></div>
             <div class="detail-row"><span class="detail-label">Error:</span><span class="detail-value ${span.error ? 'error-text' : ''}">${span.error ? 'Yes' : 'No'}</span></div>
         </div>
-
-        <div class="detail-section">
-            <h4>IDs</h4>
-            <div class="detail-row"><span class="detail-label">Trace ID:</span><span class="detail-value">${span.traceId}</span></div>
-            <div class="detail-row"><span class="detail-label">Span ID:</span><span class="detail-value">${span.spanId}</span></div>
-            ${span.parentId ? `<div class="detail-row"><span class="detail-label">Parent ID:</span><span class="detail-value">${span.parentId}</span></div>` : ''}
-        </div>
     `;
 
     if (span.tags && Object.keys(span.tags).length > 0) {
-        html += '<div class="detail-section"><h4>Tags</h4>';
-        for (const [key, value] of Object.entries(span.tags)) {
-            html += `<div class="detail-row"><span class="detail-label">${escapeHtml(key)}:</span><span class="detail-value">${escapeHtml(value)}</span></div>`;
+        html += '<div class="detail-section"><h4>Meta</h4>';
+        const sortedTags = Object.entries(span.tags).sort(([a], [b]) => a.localeCompare(b));
+        for (const [key, value] of sortedTags) {
+            html += `<div class="detail-row"><span class="detail-label detail-label-monospace">${escapeHtml(key)}:</span><span class="detail-value detail-value-monospace">${escapeHtml(value)}</span></div>`;
         }
         html += '</div>';
     }
 
     if (span.metrics && Object.keys(span.metrics).length > 0) {
         html += '<div class="detail-section"><h4>Metrics</h4>';
-        for (const [key, value] of Object.entries(span.metrics)) {
-            html += `<div class="detail-row"><span class="detail-label">${escapeHtml(key)}:</span><span class="detail-value">${value}</span></div>`;
+        const sortedMetrics = Object.entries(span.metrics).sort(([a], [b]) => a.localeCompare(b));
+        for (const [key, value] of sortedMetrics) {
+            html += `<div class="detail-row"><span class="detail-label detail-label-monospace">${escapeHtml(key)}:</span><span class="detail-value detail-value-monospace">${value}</span></div>`;
         }
         html += '</div>';
     }
@@ -359,13 +360,11 @@ async function loadTraces() {
 function renderTraceList() {
     const list = document.getElementById('traceList');
 
-    let filtered = traces;
-    if (showOnlyNonEmptyTraces) {
-        filtered = filtered.filter(t => t.spanCount > 0);
-    }
+    // Always show only non-empty traces
+    let filtered = traces.filter(t => t.spanCount > 0);
 
     if (filtered.length === 0) {
-        list.innerHTML = '<p class="empty-message">No traces match filters</p>';
+        list.innerHTML = '<p class="empty-message">No traces received yet</p>';
         return;
     }
 
@@ -378,7 +377,7 @@ function renderTraceList() {
         }
 
         item.innerHTML = `
-            <div class="item-info"><strong>Trace ID:</strong> ${escapeHtml(trace.traceId)}</div>
+            <div class="item-info"><strong>Trace ID:</strong> <span class="item-info-monospace">${escapeHtml(trace.traceId)}</span></div>
             <div class="item-stats">${trace.spanCount} spans</div>
             <div class="item-time">${escapeHtml(trace.lastSeen)}</div>
         `;
@@ -693,6 +692,13 @@ function renderTraceSpanDetails(span) {
 
     let html = `
         <div class="detail-section">
+            <h4>IDs</h4>
+            <div class="detail-row"><span class="detail-label">Trace ID:</span><span class="detail-value detail-value-monospace">${span.traceId}</span></div>
+            <div class="detail-row"><span class="detail-label">Span ID:</span><span class="detail-value detail-value-monospace">${span.spanId}</span></div>
+            ${span.parentId ? `<div class="detail-row"><span class="detail-label">Parent ID:</span><span class="detail-value detail-value-monospace">${span.parentId}</span></div>` : ''}
+        </div>
+
+        <div class="detail-section">
             <h4>Basic Info</h4>
             <div class="detail-row"><span class="detail-label">Service:</span><span class="detail-value">${escapeHtml(span.service) || 'N/A'}</span></div>
             <div class="detail-row"><span class="detail-label">Resource:</span><span class="detail-value">${escapeHtml(span.resource) || 'N/A'}</span></div>
@@ -702,27 +708,22 @@ function renderTraceSpanDetails(span) {
             <div class="detail-row"><span class="detail-label">Start:</span><span class="detail-value">${startTime}</span></div>
             <div class="detail-row"><span class="detail-label">Error:</span><span class="detail-value ${span.error ? 'error-text' : ''}">${span.error ? 'Yes' : 'No'}</span></div>
         </div>
-
-        <div class="detail-section">
-            <h4>IDs</h4>
-            <div class="detail-row"><span class="detail-label">Trace ID:</span><span class="detail-value">${span.traceId}</span></div>
-            <div class="detail-row"><span class="detail-label">Span ID:</span><span class="detail-value">${span.spanId}</span></div>
-            ${span.parentId ? `<div class="detail-row"><span class="detail-label">Parent ID:</span><span class="detail-value">${span.parentId}</span></div>` : ''}
-        </div>
     `;
 
     if (span.tags && Object.keys(span.tags).length > 0) {
-        html += '<div class="detail-section"><h4>Tags</h4>';
-        for (const [key, value] of Object.entries(span.tags)) {
-            html += `<div class="detail-row"><span class="detail-label">${escapeHtml(key)}:</span><span class="detail-value">${escapeHtml(value)}</span></div>`;
+        html += '<div class="detail-section"><h4>Meta</h4>';
+        const sortedTags = Object.entries(span.tags).sort(([a], [b]) => a.localeCompare(b));
+        for (const [key, value] of sortedTags) {
+            html += `<div class="detail-row"><span class="detail-label detail-label-monospace">${escapeHtml(key)}:</span><span class="detail-value detail-value-monospace">${escapeHtml(value)}</span></div>`;
         }
         html += '</div>';
     }
 
     if (span.metrics && Object.keys(span.metrics).length > 0) {
         html += '<div class="detail-section"><h4>Metrics</h4>';
-        for (const [key, value] of Object.entries(span.metrics)) {
-            html += `<div class="detail-row"><span class="detail-label">${escapeHtml(key)}:</span><span class="detail-value">${value}</span></div>`;
+        const sortedMetrics = Object.entries(span.metrics).sort(([a], [b]) => a.localeCompare(b));
+        for (const [key, value] of sortedMetrics) {
+            html += `<div class="detail-row"><span class="detail-label detail-label-monospace">${escapeHtml(key)}:</span><span class="detail-value detail-value-monospace">${value}</span></div>`;
         }
         html += '</div>';
     }
@@ -787,13 +788,7 @@ function setupPayloadFilter() {
 }
 
 function setupTraceFilter() {
-    const checkbox = document.getElementById('showOnlyNonEmptyTraces');
-    if (checkbox) {
-        checkbox.addEventListener('change', (e) => {
-            showOnlyNonEmptyTraces = e.target.checked;
-            renderTraceList();
-        });
-    }
+    // No filter needed for traces view - always show only non-empty traces
 }
 
 // Initialize
