@@ -107,6 +107,22 @@
         </div>
     </div>
 
+    <!-- JSON Viewer Modal -->
+    <div id="jsonModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Payload JSON</h2>
+                <div class="modal-actions">
+                    <button id="copyJsonBtn" class="modal-btn">📋 Copy</button>
+                    <button id="closeModalBtn" class="modal-btn modal-btn-close">✕ Close</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <pre id="jsonContent" class="json-viewer"></pre>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
     <script src="app.js"></script>
 </body>

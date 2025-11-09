@@ -38,15 +38,21 @@ app.MapGet("/api/payloads/{id}", (string id, TraceStorageService storage) =>
         trace.TotalSpanCount
     });
 });
-app.MapGet("/api/payloads/{id}/raw", (string id, TraceStorageService storage) =>
+app.MapGet("/api/payloads/{id}/messagepack", (string id, TraceStorageService storage) =>
 {
     var rawBytes = storage.GetRawBytes(id);
     return rawBytes != null ? Results.File(rawBytes, "application/octet-stream", $"payload-{id}.bin") : Results.NotFound();
 });
-app.MapGet("/api/payloads/{id}/json", (string id, TraceStorageService storage) =>
+app.MapGet("/api/payloads/{id}/json", (string id, TraceStorageService storage, HttpContext context) =>
 {
     var json = storage.GetJson(id);
-    return json != null ? Results.Content(json, "application/json") : Results.NotFound();
+    if (json == null)
+    {
+        return Results.NotFound();
+    }
+
+    context.Response.Headers.ContentDisposition = $"attachment; filename=\"payload-{id}.json\"";
+    return Results.Content(json, "application/json");
 });
 app.MapGet("/api/stats", (TraceStorageService storage) => storage.GetStatistics());
 

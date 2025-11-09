@@ -15,6 +15,11 @@ let selectedTraceSpanId = null;
 let urlFilter = '/v0.4/traces';
 let showOnlyNonEmpty = true;
 
+// View state tracking
+let viewedPayloads = new Set(); // Track which payloads have been viewed
+let viewedTraces = new Set(); // Track which traces have been viewed
+let traceSpanCounts = new Map(); // Track span count per trace to detect changes
+
 // Current payload state
 let currentTraceChunks = null;
 let currentChunkSpans = null;
@@ -165,6 +170,11 @@ function renderPayloadList() {
             item.classList.add('selected');
         }
 
+        // Mark as new/unread if not viewed
+        if (!viewedPayloads.has(payload.id)) {
+            item.classList.add('unread');
+        }
+
         const isTraceEndpoint = payload.url.includes('/v0.4/traces');
         const statsHtml = isTraceEndpoint
             ? `${payload.traceChunkCount} chunks, ${payload.totalSpanCount} spans`
@@ -174,9 +184,28 @@ function renderPayloadList() {
             <div class="item-time">${escapeHtml(payload.receivedAt)}</div>
             <div class="item-info item-info-monospace">${escapeHtml(payload.url)}</div>
             <div class="item-stats">${statsHtml}</div>
+            <div class="item-actions">
+                <a href="/api/payloads/${encodeURIComponent(payload.id)}/messagepack" class="item-action-btn" download>📦 MessagePack</a>
+                <a href="/api/payloads/${encodeURIComponent(payload.id)}/json" class="item-action-btn" download>📄 JSON</a>
+                <button class="item-action-btn item-action-view-json" data-payload-id="${escapeHtml(payload.id)}">👁️ View JSON</button>
+            </div>
         `;
 
-        item.addEventListener('click', () => selectPayload(payload.id));
+        item.addEventListener('click', (e) => {
+            // Don't select payload if clicking on action buttons
+            if (!e.target.classList.contains('item-action-btn') && !e.target.classList.contains('item-action-view-json')) {
+                selectPayload(payload.id);
+            }
+        });
+
+        // Add click handler for View JSON button
+        const viewJsonBtn = item.querySelector('.item-action-view-json');
+        if (viewJsonBtn) {
+            viewJsonBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openJsonModal(payload.id);
+            });
+        }
         list.appendChild(item);
     });
 }
@@ -187,6 +216,9 @@ async function selectPayload(payloadId) {
     selectedChunkIndex = null;
     selectedPayloadSpanId = null;
     currentChunkSpans = null;
+
+    // Mark as viewed
+    viewedPayloads.add(payloadId);
 
     // Update UI
     renderPayloadList();
@@ -376,6 +408,25 @@ function renderTraceList() {
             item.classList.add('selected');
         }
 
+        // Determine trace state (new, changed, or viewed)
+        const previousSpanCount = traceSpanCounts.get(trace.traceId);
+        const isViewed = viewedTraces.has(trace.traceId);
+
+        if (previousSpanCount === undefined) {
+            // New trace - never seen before
+            item.classList.add('trace-new');
+            traceSpanCounts.set(trace.traceId, trace.spanCount);
+        } else if (previousSpanCount !== trace.spanCount) {
+            // Changed trace - span count increased
+            item.classList.add('trace-changed');
+            traceSpanCounts.set(trace.traceId, trace.spanCount);
+            // Remove from viewed set so user knows it changed
+            viewedTraces.delete(trace.traceId);
+        } else if (!isViewed) {
+            // Unviewed trace (was new before, now just unread)
+            item.classList.add('trace-new');
+        }
+
         item.innerHTML = `
             <div class="item-info"><strong>Trace ID:</strong> <span class="item-info-monospace">${escapeHtml(trace.traceId)}</span></div>
             <div class="item-stats">${trace.spanCount} spans</div>
@@ -391,6 +442,9 @@ function renderTraceList() {
 async function selectTrace(traceId) {
     selectedTraceId = traceId;
     selectedTraceSpanId = null;
+
+    // Mark as viewed
+    viewedTraces.add(traceId);
 
     // Update UI
     renderTraceList();
@@ -791,10 +845,99 @@ function setupTraceFilter() {
     // No filter needed for traces view - always show only non-empty traces
 }
 
+// ============================================================================
+// JSON MODAL
+// ============================================================================
+
+async function openJsonModal(payloadId) {
+    const modal = document.getElementById('jsonModal');
+    const jsonContent = document.getElementById('jsonContent');
+
+    // Show loading state
+    jsonContent.textContent = 'Loading JSON...';
+    modal.classList.add('active');
+
+    try {
+        const response = await fetch(`/api/payloads/${payloadId}/json`);
+        if (!response.ok) {
+            throw new Error('Failed to load JSON');
+        }
+
+        const json = await response.text();
+
+        // Pretty print the JSON
+        try {
+            const parsed = JSON.parse(json);
+            jsonContent.textContent = JSON.stringify(parsed, null, 2);
+        } catch {
+            // If parsing fails, just show raw text
+            jsonContent.textContent = json;
+        }
+    } catch (err) {
+        console.error('Error loading JSON:', err);
+        jsonContent.textContent = `Error loading JSON: ${err.message}`;
+    }
+}
+
+function closeJsonModal() {
+    const modal = document.getElementById('jsonModal');
+    modal.classList.remove('active');
+}
+
+async function copyJsonToClipboard() {
+    const jsonContent = document.getElementById('jsonContent');
+    const text = jsonContent.textContent;
+
+    try {
+        await navigator.clipboard.writeText(text);
+
+        // Visual feedback
+        const copyBtn = document.getElementById('copyJsonBtn');
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = '✓ Copied!';
+        copyBtn.style.background = '#2ecc71';
+
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+            copyBtn.style.background = '';
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard');
+    }
+}
+
+function setupJsonModal() {
+    const modal = document.getElementById('jsonModal');
+    const closeBtn = document.getElementById('closeModalBtn');
+    const copyBtn = document.getElementById('copyJsonBtn');
+
+    // Close button
+    closeBtn.addEventListener('click', closeJsonModal);
+
+    // Copy button
+    copyBtn.addEventListener('click', copyJsonToClipboard);
+
+    // Click outside to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeJsonModal();
+        }
+    });
+
+    // ESC key to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeJsonModal();
+        }
+    });
+}
+
 // Initialize
 setupViewSwitcher();
 setupUrlFilter();
 setupPayloadFilter();
 setupTraceFilter();
+setupJsonModal();
 startConnection();
 
