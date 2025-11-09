@@ -25,26 +25,29 @@ The solution now consists of three projects:
 
 ```
 MockTraceAgent/
-├── MockTraceAgent.Cli.csproj          # CLI application project
-├── Program.cs                          # CLI entry point
-├── ListenCommand.cs                    # CLI command handler
+├── MockTraceAgent.Cli/
+│   ├── MockTraceAgent.Cli.csproj   # CLI application project
+│   ├── Program.cs                   # CLI entry point
+│   └── ListenCommand.cs            # CLI command handler
 ├── MockTraceAgent.Core/
-│   ├── MockTraceAgent.Core.csproj     # Shared library project
-│   ├── TraceAgent.cs                  # HTTP listener implementation
-│   └── Span.cs                        # MessagePack data model
+│   ├── MockTraceAgent.Core.csproj  # Shared library project
+│   ├── TraceAgent.cs               # HTTP listener implementation
+│   └── Span.cs                     # MessagePack data model
 └── MockTraceAgent.Web/
-    ├── MockTraceAgent.Web.csproj      # Web application project
-    ├── Program.cs                      # ASP.NET Core entry point
-    ├── appsettings.json                # Configuration (TraceAgentPort)
-    ├── Hubs/TracesHub.cs              # SignalR hub
+    ├── MockTraceAgent.Web.csproj   # Web application project
+    ├── Program.cs                   # ASP.NET Core entry point
+    ├── appsettings.json             # Configuration (TraceAgentPort)
+    ├── Hubs/
+    │   └── TracesHub.cs            # SignalR hub
     ├── Services/
     │   ├── TraceAgentHostedService.cs  # Background trace listener
-    │   └── TraceStorageService.cs      # In-memory storage
-    ├── Models/TraceData.cs            # Data models
-    └── wwwroot/                        # Static web files
-        ├── index.html
-        ├── styles.css
-        └── app.js
+    │   └── TraceStorageService.cs      # In-memory storage + trace aggregation
+    ├── Models/
+    │   └── TraceData.cs            # Data models (PayloadData, AggregatedTrace, etc.)
+    └── wwwroot/                     # Static web files
+        ├── index.html               # Dual-view UI (Payloads + Traces)
+        ├── styles.css               # Responsive 3-pane and 4-pane layouts
+        └── app.js                   # SignalR client + view logic
 ```
 
 ## Build & Run Commands
@@ -147,26 +150,35 @@ Core components shared between CLI and Web applications:
    - Starts `TraceAgent` from Core library on configured port
    - Routes received traces to `TraceStorageService`
 
-3. **Services/TraceStorageService.cs** - In-memory trace storage
-   - Stores received traces with deserialized span data
-   - Broadcasts new traces to connected clients via SignalR
-   - Provides API methods for retrieving traces, raw bytes, and JSON
+3. **Services/TraceStorageService.cs** - In-memory storage and trace aggregation
+   - Stores received payloads with deserialized span data
+   - Aggregates spans by trace ID across multiple payloads
+   - Broadcasts new payloads to connected clients via SignalR
+   - Provides API methods for:
+     - Retrieving payloads, raw bytes, and JSON
+     - Accessing aggregated traces grouped by trace ID
 
 4. **Hubs/TracesHub.cs** - SignalR hub for real-time updates
-   - Broadcasts trace events to all connected web clients
+   - Broadcasts payload events to all connected web clients
 
 5. **Models/TraceData.cs** - Data models
-   - `TraceData`: Represents a received trace with metadata and spans
-   - `TraceStatistics`: Aggregated statistics across all traces
+   - `PayloadData`: Represents a received payload with metadata and trace chunks
+   - `AggregatedTrace`: Represents spans grouped by trace ID across payloads
+   - `TraceStatistics`: Aggregated statistics across all payloads
 
-6. **wwwroot/** - Static web frontend
-   - **index.html**: Main UI with trace list and detail panels
-   - **styles.css**: Styling for the web interface
+6. **wwwroot/** - Static web frontend (dual-view UI)
+   - **index.html**: Main UI with view switcher and two layouts
+     - **Payloads View (4-pane)**: Payloads → Trace Chunks → Spans → Span Details
+     - **Traces View (3-pane)**: Traces → Span Tree → Span Details
+   - **styles.css**: Responsive layouts for both views
    - **app.js**: JavaScript application logic
      - SignalR client for real-time updates
-     - Trace list rendering
-     - Span hierarchy visualization
-     - JSON viewer
+     - View switching (Payloads/Traces)
+     - Payload list with URL filtering and empty filtering
+     - Trace chunk and span drill-down (Payloads view)
+     - Aggregated trace list with filtering (Traces view)
+     - Hierarchical span tree builder with parent-child relationships
+     - Span details rendering (tags, metrics, IDs)
      - Download functionality for raw/JSON formats
 
 ### Request Processing Flow
@@ -183,13 +195,17 @@ Core components shared between CLI and Web applications:
 #### Web Application Flow
 1. `TraceAgent` receives HTTP request on background thread
 2. Reads request body into pooled buffer
-3. Invokes callback to `TraceStorageService.AddTrace()`
-4. `TraceStorageService` processes the trace:
+3. Invokes callback to `TraceStorageService.AddPayload()`
+4. `TraceStorageService` processes the payload:
    - Deserializes MessagePack payload to `IList<IList<Span>>`
-   - Stores trace data in memory with unique ID
-   - Broadcasts trace event to all connected clients via SignalR
+   - Stores payload data in memory with unique ID
+   - Aggregates spans by trace ID for cross-payload trace analysis
+   - Broadcasts payload event to all connected clients via SignalR
 5. Web frontend receives SignalR event and updates UI in real-time
-6. User can select traces to view detailed span hierarchy and download raw/JSON data
+6. User can switch between two views:
+   - **Payloads View**: Drill down through payloads → chunks → spans → details
+   - **Traces View**: Explore aggregated traces with hierarchical span trees
+7. User can download raw MessagePack or JSON for any payload
 
 ### Datadog Trace Format
 
@@ -203,47 +219,55 @@ Saved filenames use format: `payload-{url_part}-{timestamp}.{bin|json}`
 
 ## Web Application Features
 
-The web frontend provides:
+The web frontend provides a dual-view interface:
 
-1. **Real-time Trace Display**
-   - Live updating list of received traces
-   - SignalR-based push notifications for new traces
-   - Statistics dashboard showing total traces, spans, and bytes
+### Payloads View (4-pane Layout)
+Inspect raw payload data as received from the tracer:
+1. **Payloads List**: All received payloads with timestamp, URL, size
+   - URL filtering (e.g., `/v0.4/traces`)
+   - Toggle to show/hide empty payloads
+   - Download buttons for raw/JSON
+2. **Trace Chunks**: Chunks within selected payload
+3. **Spans**: Individual spans within selected chunk
+4. **Span Details**: Full details for selected span
 
-2. **Trace Visualization**
-   - Hierarchical tree view of spans showing parent-child relationships
-   - Visual indentation to represent trace structure
+### Traces View (3-pane Layout)
+Explore aggregated traces across all payloads:
+1. **Traces List**: All unique traces aggregated by trace ID
+   - Shows first/last seen timestamps
+   - Span count per trace
+   - Toggle to show/hide empty traces
+2. **Span Tree**: Hierarchical tree showing parent-child relationships
+   - Visual indentation for nesting levels
    - Color-coded error highlighting
    - Duration display in human-readable format
-
-3. **Detailed Span Information**
+3. **Span Details**: Full information for selected span
    - Service, resource, type, and IDs
    - Tags (metadata) and metrics
    - Start time and duration
    - Error indicators
 
-4. **Data Export**
-   - Download raw MessagePack bytes (.bin)
-   - Download converted JSON (.json)
-   - JSON syntax-highlighted viewer in browser
-
-5. **Connection Status**
-   - Real-time connection status indicator
-   - Automatic reconnection on network issues
+### Common Features
+- **Real-time Updates**: SignalR-based push notifications for new payloads
+- **Statistics Dashboard**: Total payloads, spans, and bytes
+- **Connection Status**: Real-time indicator with automatic reconnection
+- **Data Export**: Download raw MessagePack (.bin) or JSON (.json) for any payload
 
 ## REST API Endpoints
 
-The web application exposes a REST API for programmatic access to trace data.
+The web application exposes a REST API for programmatic access to payload and trace data.
 
-### GET /api/traces
-List all received traces (summary view).
+### Payload Endpoints
 
-**Response**: Array of trace summaries (most recent first)
+#### GET /api/payloads
+List all received payloads (summary view).
+
+**Response**: Array of payload summaries (most recent first)
 ```json
 [
   {
     "id": "abc123...",
-    "receivedAt": "2025-11-07 10:30:45.12",
+    "receivedAt": "2025-11-09 10:30:45.12",
     "url": "/v0.4/traces",
     "contentLength": 1024,
     "traceChunkCount": 5,
@@ -252,14 +276,14 @@ List all received traces (summary view).
 ]
 ```
 
-### GET /api/traces/{id}
-Get detailed trace information including all spans.
+#### GET /api/payloads/{id}
+Get detailed payload information including all spans.
 
-**Response**: Full trace data (without raw bytes)
+**Response**: Full payload data (without raw bytes)
 ```json
 {
   "id": "abc123...",
-  "receivedAt": "2025-11-07T10:30:45.123",
+  "receivedAt": "2025-11-09T10:30:45.123",
   "url": "/v0.4/traces",
   "contentLength": 1024,
   "traceChunks": [[/* span objects */]],
@@ -268,42 +292,75 @@ Get detailed trace information including all spans.
 }
 ```
 
-**Note**: Raw bytes are excluded from this response to reduce payload size. Use `/api/traces/{id}/raw` to download them.
+**Note**: Raw bytes are excluded from this response to reduce payload size. Use `/api/payloads/{id}/raw` to download them.
 
-### GET /api/traces/{id}/raw
-Download raw MessagePack bytes for a trace.
+#### GET /api/payloads/{id}/raw
+Download raw MessagePack bytes for a payload.
 
 **Response**: Binary file (application/octet-stream)
-- Filename: `trace-{id}.bin`
+- Filename: `payload-{id}.bin`
 - Content: Original MessagePack payload as received
 
-### GET /api/traces/{id}/json
-Download trace as JSON.
+#### GET /api/payloads/{id}/json
+Download payload as JSON.
 
 **Response**: JSON file (application/json)
-- Filename: `trace-{id}.json`
+- Filename: `payload-{id}.json`
 - Content: MessagePack payload converted to JSON
 
-### GET /api/stats
+### Aggregated Trace Endpoints
+
+#### GET /api/traces
+List all aggregated traces (grouped by trace ID across payloads).
+
+**Response**: Array of aggregated traces
+```json
+[
+  {
+    "traceId": "12345678901234567890",
+    "spanCount": 15,
+    "firstSeen": "2025-11-09 10:30:45.12",
+    "lastSeen": "2025-11-09 10:30:47.89"
+  }
+]
+```
+
+#### GET /api/traces/{traceId}
+Get all spans for a specific trace ID.
+
+**Response**: Full trace with all spans
+```json
+{
+  "traceId": "12345678901234567890",
+  "spans": [/* array of span objects */],
+  "spanCount": 15,
+  "firstSeen": "2025-11-09 10:30:45.12",
+  "lastSeen": "2025-11-09 10:30:47.89"
+}
+```
+
+### Statistics Endpoint
+
+#### GET /api/stats
 Get aggregate statistics.
 
 **Response**: Statistics object
 ```json
 {
-  "totalTraces": 42,
+  "totalPayloads": 42,
   "totalSpans": 156,
   "totalBytes": 51200,
-  "firstTraceAt": "2025-11-07T10:00:00.000",
-  "lastTraceAt": "2025-11-07T10:30:45.123"
+  "firstPayloadAt": "2025-11-09T10:00:00.000",
+  "lastPayloadAt": "2025-11-09T10:30:45.123"
 }
 ```
 
 ### SignalR Hub: /hubs/traces
 Real-time events for connected clients.
 
-**Event**: `ReceiveTrace` - Fired when new trace arrives
+**Event**: `ReceiveTrace` - Fired when new payload arrives
 ```javascript
-connection.on("ReceiveTrace", (trace) => {
-  // trace object contains: id, receivedAt, url, contentLength, traceChunkCount, totalSpanCount
+connection.on("ReceiveTrace", (payload) => {
+  // payload object contains: id, receivedAt, url, contentLength, traceChunkCount, totalSpanCount
 });
 ```
