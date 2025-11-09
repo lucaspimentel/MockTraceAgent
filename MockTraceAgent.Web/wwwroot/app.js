@@ -70,7 +70,7 @@ function updateConnectionStatus(isConnected) {
 // Load existing traces from API
 async function loadExistingTraces() {
     try {
-        const response = await fetch('/api/traces');
+        const response = await fetch('/api/payloads');
         traces = await response.json();
         renderTraceList();
         updateStatistics();
@@ -194,10 +194,10 @@ function addTraceToList(trace) {
             ${statsHtml}
         </div>
         <div class="trace-item-actions">
-            <a href="/api/traces/${escapeHtml(trace.id)}/raw" class="trace-item-btn" download="trace-${escapeHtml(trace.id)}.bin" title="Download Raw MessagePack">
+            <a href="/api/payloads/${escapeHtml(trace.id)}/raw" class="trace-item-btn" download="payload-${escapeHtml(trace.id)}.bin" title="Download Raw MessagePack">
                 <span>📦 Raw</span>
             </a>
-            <a href="/api/traces/${escapeHtml(trace.id)}/json" class="trace-item-btn" download="trace-${escapeHtml(trace.id)}.json" title="Download JSON">
+            <a href="/api/payloads/${escapeHtml(trace.id)}/json" class="trace-item-btn" download="payload-${escapeHtml(trace.id)}.json" title="Download JSON">
                 <span>📄 JSON</span>
             </a>
         </div>
@@ -226,7 +226,7 @@ async function selectTrace(traceId) {
 
     // Load trace details
     try {
-        const response = await fetch(`/api/traces/${traceId}`);
+        const response = await fetch(`/api/payloads/${traceId}`);
         const trace = await response.json();
         displayTraceDetails(trace);
     } catch (err) {
@@ -722,7 +722,271 @@ function setupNonEmptyPayloadFilter() {
     });
 }
 
+// Combined traces view variables
+let combinedTraces = new Map(); // traceId -> { traceId, spans: [], firstSeen, lastSeen }
+let showOnlyNonEmptyTraces = true;
+let selectedCombinedTraceId = null;
+
+// Process payloads to extract and combine traces
+function processCombinedTraces() {
+    combinedTraces.clear();
+
+    traces.forEach(payload => {
+        if (!payload.url.includes('/v0.4/traces') || !payload.traceChunks) {
+            return;
+        }
+
+        payload.traceChunks.forEach(chunk => {
+            chunk.forEach(span => {
+                const traceId = span.traceId;
+                if (!combinedTraces.has(traceId)) {
+                    combinedTraces.set(traceId, {
+                        traceId: traceId,
+                        spans: [],
+                        firstSeen: payload.receivedAt,
+                        lastSeen: payload.receivedAt
+                    });
+                }
+
+                const trace = combinedTraces.get(traceId);
+                trace.spans.push(span);
+
+                // Update time range
+                if (payload.receivedAt < trace.firstSeen) {
+                    trace.firstSeen = payload.receivedAt;
+                }
+                if (payload.receivedAt > trace.lastSeen) {
+                    trace.lastSeen = payload.receivedAt;
+                }
+            });
+        });
+    });
+
+    renderCombinedTraceList();
+}
+
+// Render combined trace list
+function renderCombinedTraceList() {
+    const traceList = document.getElementById('combinedTraceList');
+
+    if (combinedTraces.size === 0) {
+        traceList.innerHTML = '<p class="empty-message">No traces received yet. Waiting for incoming traces...</p>';
+        return;
+    }
+
+    // Filter traces
+    let tracesArray = Array.from(combinedTraces.values());
+    if (showOnlyNonEmptyTraces) {
+        tracesArray = tracesArray.filter(trace => trace.spans.length > 0);
+    }
+
+    if (tracesArray.length === 0) {
+        traceList.innerHTML = '<p class="empty-message">No traces match the current filter.</p>';
+        return;
+    }
+
+    // Sort by last seen (most recent first)
+    tracesArray.sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+
+    traceList.innerHTML = '';
+    tracesArray.forEach(trace => {
+        addCombinedTraceToList(trace);
+    });
+}
+
+// Add combined trace to list
+function addCombinedTraceToList(trace) {
+    const traceList = document.getElementById('combinedTraceList');
+
+    const traceItem = document.createElement('div');
+    traceItem.className = 'trace-item';
+    traceItem.dataset.traceId = trace.traceId;
+
+    if (selectedCombinedTraceId === trace.traceId) {
+        traceItem.classList.add('selected');
+    }
+
+    if (trace.spans.length === 0) {
+        traceItem.classList.add('empty-payload');
+    }
+
+    traceItem.innerHTML = `
+        <div class="trace-item-header">
+            <span class="trace-time">${escapeHtml(trace.lastSeen)}</span>
+        </div>
+        <div class="trace-item-info">
+            <span><strong>Trace ID:</strong> ${escapeHtml(trace.traceId.toString())}</span>
+        </div>
+        <div class="trace-item-info">
+            <span>${trace.spans.length} spans</span>
+        </div>
+    `;
+
+    traceItem.addEventListener('click', () => selectCombinedTrace(trace.traceId));
+
+    traceList.insertBefore(traceItem, traceList.firstChild);
+}
+
+// Select and display combined trace details
+function selectCombinedTrace(traceId) {
+    selectedCombinedTraceId = traceId;
+
+    // Update selected state in list
+    document.querySelectorAll('#combinedTraceList .trace-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.traceId === traceId.toString());
+    });
+
+    const trace = combinedTraces.get(traceId);
+    if (!trace) return;
+
+    displayCombinedTraceDetails(trace);
+}
+
+// Display combined trace details
+function displayCombinedTraceDetails(trace) {
+    const detailsPanel = document.getElementById('traceDetails');
+
+    detailsPanel.innerHTML = `
+        <h3>Trace Details</h3>
+
+        <div class="trace-info" style="margin-bottom: 1.5rem;">
+            <div class="trace-info-row">
+                <span class="trace-info-label">Trace ID:</span>
+                <span class="trace-info-value">${escapeHtml(trace.traceId.toString())}</span>
+            </div>
+            <div class="trace-info-row">
+                <span class="trace-info-label">Total Spans:</span>
+                <span class="trace-info-value">${trace.spans.length}</span>
+            </div>
+            <div class="trace-info-row">
+                <span class="trace-info-label">First Seen:</span>
+                <span class="trace-info-value">${escapeHtml(trace.firstSeen)}</span>
+            </div>
+            <div class="trace-info-row">
+                <span class="trace-info-label">Last Seen:</span>
+                <span class="trace-info-value">${escapeHtml(trace.lastSeen)}</span>
+            </div>
+        </div>
+
+        <h4 style="margin-bottom: 1rem;">Span Tree</h4>
+        <div style="flex: 1; overflow-y: auto;">
+            ${renderCombinedTraceSpanTree(trace.spans)}
+        </div>
+    `;
+}
+
+// Render span tree for combined trace
+function renderCombinedTraceSpanTree(spans) {
+    // Build parent-child relationships
+    const spanMap = new Map();
+    const rootSpans = [];
+
+    spans.forEach(span => {
+        spanMap.set(span.spanId, { ...span, children: [] });
+    });
+
+    spans.forEach(span => {
+        const spanNode = spanMap.get(span.spanId);
+        if (span.parentId && spanMap.has(span.parentId)) {
+            spanMap.get(span.parentId).children.push(spanNode);
+        } else {
+            rootSpans.push(spanNode);
+        }
+    });
+
+    // Render tree
+    let html = '<div class="span-tree-list">';
+    rootSpans.forEach(span => {
+        html += renderSpanTreeNode(span, 0);
+    });
+    html += '</div>';
+
+    // Setup click handlers after render
+    setTimeout(() => {
+        setupCombinedTraceSpanHandlers(spans);
+    }, 0);
+
+    return html;
+}
+
+// Setup span click handlers for combined trace view
+function setupCombinedTraceSpanHandlers(spans) {
+    document.querySelectorAll('.span-tree-node').forEach(node => {
+        node.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            // Remove previous selection
+            document.querySelectorAll('.span-tree-node').forEach(n => n.classList.remove('selected'));
+            // Add selection to clicked node
+            node.classList.add('selected');
+
+            const spanId = node.dataset.spanId;
+            const span = spans.find(s => s.spanId.toString() === spanId.toString());
+
+            if (span) {
+                // Show span details inline
+                showCombinedTraceSpanDetails(span);
+            }
+        });
+    });
+}
+
+// Show span details for combined trace view
+function showCombinedTraceSpanDetails(span) {
+    // Find or create details container
+    let detailsContainer = document.getElementById('combinedSpanDetails');
+    if (!detailsContainer) {
+        detailsContainer = document.createElement('div');
+        detailsContainer.id = 'combinedSpanDetails';
+        detailsContainer.style.cssText = 'margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #ddd;';
+        document.querySelector('#traceDetails > div:last-child').appendChild(detailsContainer);
+    }
+
+    detailsContainer.innerHTML = `
+        <h5 style="margin-bottom: 1rem;">Span Details</h5>
+        ${renderSpanDetails(span)}
+    `;
+}
+
+// Setup view switcher
+function setupViewSwitcher() {
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const view = btn.dataset.view;
+
+            // Update button states
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update view content
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.getElementById(`${view}-view`).classList.add('active');
+
+            // Clear right panel
+            document.getElementById('traceDetails').innerHTML = '<p class="empty-message">Select a trace to view details</p>';
+
+            // Process combined traces if switching to traces view
+            if (view === 'traces') {
+                processCombinedTraces();
+            }
+        });
+    });
+}
+
+// Setup combined traces filter
+function setupCombinedTracesFilter() {
+    const checkbox = document.getElementById('showOnlyNonEmptyTraces');
+    if (checkbox) {
+        checkbox.addEventListener('change', (e) => {
+            showOnlyNonEmptyTraces = e.target.checked;
+            renderCombinedTraceList();
+        });
+    }
+}
+
 // Initialize
 setupUrlFilter();
 setupNonEmptyPayloadFilter();
+setupViewSwitcher();
+setupCombinedTracesFilter();
 startConnection();

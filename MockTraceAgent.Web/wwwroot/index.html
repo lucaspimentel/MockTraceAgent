@@ -32,8 +32,13 @@
 
         <div class="content">
             <div class="left-panel">
-                <h2>Received Payloads</h2>
-                <div class="filter-section">
+                <div class="view-selector">
+                    <button class="view-btn active" data-view="payloads">Payloads</button>
+                    <button class="view-btn" data-view="traces">Traces</button>
+                </div>
+
+                <div id="payloads-view" class="view-content active">
+                    <div class="filter-section">
                     <label for="urlFilter">Filter by URL:</label>
                     <input type="text" id="urlFilter" placeholder="e.g., /v0.4/traces" value="/v0.4/traces">
 
@@ -44,8 +49,23 @@
                         </label>
                     </div>
                 </div>
-                <div class="trace-list" id="traceList">
-                    <p class="empty-message">No traces received yet. Waiting for incoming traces...</p>
+                    <div class="trace-list" id="traceList">
+                        <p class="empty-message">No traces received yet. Waiting for incoming traces...</p>
+                    </div>
+                </div>
+
+                <div id="traces-view" class="view-content">
+                    <div class="filter-section">
+                        <div class="filter-checkbox">
+                            <label>
+                                <input type="checkbox" id="showOnlyNonEmptyTraces" checked>
+                                Show only non-empty traces
+                            </label>
+                        </div>
+                    </div>
+                    <div class="trace-list" id="combinedTraceList">
+                        <p class="empty-message">No traces received yet. Waiting for incoming traces...</p>
+                    </div>
                 </div>
             </div>
 

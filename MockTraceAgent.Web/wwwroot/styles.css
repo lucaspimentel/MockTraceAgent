@@ -68,6 +68,46 @@ header h1 {
     flex-direction: column;
 }
 
+.view-selector {
+    display: flex;
+    background: #2c3e50;
+    border-bottom: 2px solid #1a252f;
+}
+
+.view-btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    color: #bdc3c7;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 3px solid transparent;
+}
+
+.view-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ecf0f1;
+}
+
+.view-btn.active {
+    color: #3498db;
+    border-bottom-color: #3498db;
+    background: rgba(52, 152, 219, 0.1);
+}
+
+.view-content {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+}
+
+.view-content.active {
+    display: flex;
+}
+
 .left-panel h2 {
     padding: 1rem;
     background: #ecf0f1;
