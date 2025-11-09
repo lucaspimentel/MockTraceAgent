@@ -308,9 +308,9 @@ Get detailed payload information including all spans.
 }
 ```
 
-**Note**: Raw bytes are excluded from this response to reduce payload size. Use `/api/payloads/{id}/raw` to download them.
+**Note**: Raw bytes are excluded from this response to reduce payload size. Use `/api/payloads/{id}/messagepack` to download them.
 
-#### GET /api/payloads/{id}/raw
+#### GET /api/payloads/{id}/messagepack
 Download raw MessagePack bytes for a payload.
 
 **Response**: Binary file (application/octet-stream)
