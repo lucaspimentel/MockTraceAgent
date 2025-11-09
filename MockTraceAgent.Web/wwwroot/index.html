@@ -30,48 +30,86 @@
             </div>
         </header>
 
+        <div class="view-selector">
+            <button class="view-btn active" data-view="payloads">Payloads</button>
+            <button class="view-btn" data-view="traces">Traces</button>
+        </div>
+
         <div class="content">
-            <div class="left-panel">
-                <div class="view-selector">
-                    <button class="view-btn active" data-view="payloads">Payloads</button>
-                    <button class="view-btn" data-view="traces">Traces</button>
-                </div>
-
-                <div id="payloads-view" class="view-content active">
-                    <div class="filter-section">
-                    <label for="urlFilter">Filter by URL:</label>
-                    <input type="text" id="urlFilter" placeholder="e.g., /v0.4/traces" value="/v0.4/traces">
-
-                    <div class="filter-checkbox">
-                        <label>
-                            <input type="checkbox" id="showOnlyNonEmpty" checked>
-                            Show only non-empty trace payloads
-                        </label>
-                    </div>
-                </div>
-                    <div class="trace-list" id="traceList">
-                        <p class="empty-message">No traces received yet. Waiting for incoming traces...</p>
-                    </div>
-                </div>
-
-                <div id="traces-view" class="view-content">
-                    <div class="filter-section">
-                        <div class="filter-checkbox">
-                            <label>
-                                <input type="checkbox" id="showOnlyNonEmptyTraces" checked>
-                                Show only non-empty traces
-                            </label>
+            <!-- Payloads View: 4-pane layout for raw payload data -->
+            <div id="payloads-view" class="view-content active">
+                <div class="payloads-layout">
+                    <div class="payload-pane">
+                        <h3>Payloads</h3>
+                        <div class="filter-section">
+                            <label for="urlFilter">Filter by URL:</label>
+                            <input type="text" id="urlFilter" placeholder="e.g., /v0.4/traces" value="/v0.4/traces">
+                            <div class="filter-checkbox">
+                                <label>
+                                    <input type="checkbox" id="showOnlyNonEmpty" checked>
+                                    Show only non-empty payloads
+                                </label>
+                            </div>
+                        </div>
+                        <div class="item-list" id="payloadList">
+                            <p class="empty-message">No payloads received yet</p>
                         </div>
                     </div>
-                    <div class="trace-list" id="combinedTraceList">
-                        <p class="empty-message">No traces received yet. Waiting for incoming traces...</p>
+
+                    <div class="chunk-pane">
+                        <h3>Trace Chunks</h3>
+                        <div class="item-list" id="chunkList">
+                            <p class="empty-message">Select a payload</p>
+                        </div>
+                    </div>
+
+                    <div class="span-pane">
+                        <h3>Spans</h3>
+                        <div class="item-list" id="spanList">
+                            <p class="empty-message">Select a trace chunk</p>
+                        </div>
+                    </div>
+
+                    <div class="details-pane">
+                        <h3>Span Details</h3>
+                        <div class="details-content" id="payloadSpanDetails">
+                            <p class="empty-message">Select a span</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="right-panel">
-                <div class="trace-details" id="traceDetails">
-                    <p class="empty-message">Select a trace to view details</p>
+            <!-- Traces View: 3-pane layout for processed trace data -->
+            <div id="traces-view" class="view-content">
+                <div class="traces-layout">
+                    <div class="trace-list-pane">
+                        <h3>Traces</h3>
+                        <div class="filter-section">
+                            <div class="filter-checkbox">
+                                <label>
+                                    <input type="checkbox" id="showOnlyNonEmptyTraces" checked>
+                                    Show only non-empty traces
+                                </label>
+                            </div>
+                        </div>
+                        <div class="item-list" id="traceList">
+                            <p class="empty-message">No traces received yet</p>
+                        </div>
+                    </div>
+
+                    <div class="span-tree-pane">
+                        <h3>Span Tree</h3>
+                        <div class="item-list" id="spanTreeList">
+                            <p class="empty-message">Select a trace</p>
+                        </div>
+                    </div>
+
+                    <div class="details-pane">
+                        <h3>Span Details</h3>
+                        <div class="details-content" id="traceSpanDetails">
+                            <p class="empty-message">Select a span</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
