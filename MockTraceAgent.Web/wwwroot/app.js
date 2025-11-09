@@ -16,6 +16,10 @@ let urlFilter = '/v0.4/traces';
 let showOnlyNonEmpty = true;
 let showOnlyNonEmptyTraces = true;
 
+// Current payload state
+let currentTraceChunks = null;
+let currentChunkSpans = null;
+
 // HTML escape function
 function escapeHtml(unsafe) {
     if (unsafe == null) return '';
@@ -177,6 +181,7 @@ async function selectPayload(payloadId) {
     selectedPayloadId = payloadId;
     selectedChunkIndex = null;
     selectedPayloadSpanId = null;
+    currentChunkSpans = null;
 
     // Update UI
     renderPayloadList();
@@ -185,7 +190,8 @@ async function selectPayload(payloadId) {
     try {
         const response = await fetch(`/api/payloads/${payloadId}`);
         const payload = await response.json();
-        renderChunkList(payload.traceChunks);
+        currentTraceChunks = payload.traceChunks;
+        renderChunkList();
     } catch (err) {
         console.error("Error loading payload details:", err);
     }
@@ -196,16 +202,16 @@ async function selectPayload(payloadId) {
 }
 
 // Render trace chunk list
-function renderChunkList(traceChunks) {
+function renderChunkList() {
     const list = document.getElementById('chunkList');
 
-    if (!traceChunks || traceChunks.length === 0) {
+    if (!currentTraceChunks || currentTraceChunks.length === 0) {
         list.innerHTML = '<p class="empty-message">No trace chunks in payload</p>';
         return;
     }
 
     list.innerHTML = '';
-    traceChunks.forEach((chunk, index) => {
+    currentTraceChunks.forEach((chunk, index) => {
         const item = document.createElement('div');
         item.className = 'list-item';
         if (selectedChunkIndex === index) {
@@ -219,36 +225,38 @@ function renderChunkList(traceChunks) {
             <div class="item-stats">${chunk.length} spans</div>
         `;
 
-        item.addEventListener('click', () => selectChunk(index, chunk));
+        item.addEventListener('click', () => selectChunk(index));
         list.appendChild(item);
     });
 }
 
 // Select a trace chunk
-function selectChunk(index, chunk) {
+function selectChunk(index) {
     selectedChunkIndex = index;
     selectedPayloadSpanId = null;
 
-    // Update UI
-    renderChunkList(chunk);
+    // Store the current chunk's spans
+    currentChunkSpans = currentTraceChunks[index];
 
-    renderSpanList(chunk);
+    // Update UI
+    renderChunkList();
+    renderSpanList();
 
     // Clear span details
     document.getElementById('payloadSpanDetails').innerHTML = '<p class="empty-message">Select a span</p>';
 }
 
 // Render flat span list (no hierarchy)
-function renderSpanList(spans) {
+function renderSpanList() {
     const list = document.getElementById('spanList');
 
-    if (!spans || spans.length === 0) {
+    if (!currentChunkSpans || currentChunkSpans.length === 0) {
         list.innerHTML = '<p class="empty-message">No spans in chunk</p>';
         return;
     }
 
     list.innerHTML = '';
-    spans.forEach(span => {
+    currentChunkSpans.forEach(span => {
         const item = document.createElement('div');
         item.className = 'list-item span-item';
         if (selectedPayloadSpanId === span.spanId) {
@@ -276,7 +284,7 @@ function selectPayloadSpan(span) {
     selectedPayloadSpanId = span.spanId;
 
     // Update UI
-    renderSpanList([span]); // Force re-render to update selection
+    renderSpanList();
 
     renderPayloadSpanDetails(span);
 }
