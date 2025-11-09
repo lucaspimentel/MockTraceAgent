@@ -788,3 +788,23 @@ header h1 {
     word-break: break-word;
     font-family: 'Courier New', Consolas, Monaco, monospace;
 }
+
+/* Flamegraph styles */
+.flamegraph-svg {
+    background: #fafafa;
+    display: block;
+}
+
+.flamegraph-bar-group {
+    transition: filter 0.15s ease;
+}
+
+.flamegraph-bar-rect {
+    transition: stroke 0.15s ease, stroke-width 0.15s ease;
+}
+
+.flamegraph-bar-text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 500;
+    user-select: none;
+}

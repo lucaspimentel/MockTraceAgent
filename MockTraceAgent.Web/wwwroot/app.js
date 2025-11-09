@@ -51,6 +51,12 @@ connection.on("ReceiveTrace", (payload) => {
     payloads.unshift(payload);
     renderPayloadList();
     updateStatistics();
+
+    // If traces view is active, reload traces
+    const tracesView = document.getElementById('traces-view');
+    if (tracesView && tracesView.classList.contains('active')) {
+        loadTraces();
+    }
 });
 
 // Connection handlers
@@ -403,14 +409,16 @@ async function selectTrace(traceId) {
     document.getElementById('traceSpanDetails').innerHTML = '<p class="empty-message">Select a span</p>';
 }
 
-// Render span tree (hierarchical)
-function renderSpanTree(spans) {
-    const list = document.getElementById('spanTreeList');
-
+// Build flamegraph data structure from spans
+function buildFlamegraphData(spans) {
     if (!spans || spans.length === 0) {
-        list.innerHTML = '<p class="empty-message">No spans in trace</p>';
-        return;
+        return null;
     }
+
+    // Calculate trace bounds
+    const minStart = Math.min(...spans.map(s => s.start));
+    const maxEnd = Math.max(...spans.map(s => s.start + s.duration));
+    const traceDuration = maxEnd - minStart;
 
     // Build parent-child relationships
     const spanMap = new Map();
@@ -429,57 +437,250 @@ function renderSpanTree(spans) {
         }
     });
 
-    // Render tree
-    list.innerHTML = '';
-    rootSpans.forEach(span => {
-        renderSpanTreeNode(span, 0, list);
-    });
+    // Assign depth levels and calculate relative positioning
+    const allSpansWithDepth = [];
+
+    function assignDepth(span, depth = 0) {
+        span.depth = depth;
+        span.relativeStart = (span.start - minStart) / traceDuration;
+        span.relativeWidth = span.duration / traceDuration;
+        allSpansWithDepth.push(span);
+
+        if (span.children && span.children.length > 0) {
+            // Sort children by start time
+            span.children.sort((a, b) => a.start - b.start);
+            span.children.forEach(child => assignDepth(child, depth + 1));
+        }
+    }
+
+    rootSpans.forEach(span => assignDepth(span));
+
+    // Calculate max depth for height
+    const maxDepth = Math.max(...allSpansWithDepth.map(s => s.depth));
+
+    return {
+        spans: allSpansWithDepth,
+        traceDuration,
+        minStart,
+        maxDepth
+    };
 }
 
-// Render individual span tree node
-function renderSpanTreeNode(span, depth, container) {
-    const item = document.createElement('div');
-    item.className = 'list-item span-tree-node';
-    item.style.marginLeft = `${depth * 1.5}rem`;
-    if (selectedTraceSpanId === span.spanId) {
-        item.classList.add('selected');
+// Generate consistent color for a service
+const serviceColors = new Map();
+const colorPalette = [
+    '#6741d9', '#2f9e44', '#f76707', '#1971c2',
+    '#e03131', '#7048e8', '#0ca678', '#d9480f'
+];
+
+function getServiceColor(serviceName) {
+    if (!serviceName) return '#95a5a6';
+
+    if (!serviceColors.has(serviceName)) {
+        serviceColors.set(
+            serviceName,
+            colorPalette[serviceColors.size % colorPalette.length]
+        );
     }
-    if (span.error) {
-        item.classList.add('error');
+    return serviceColors.get(serviceName);
+}
+
+// Render flamegraph using SVG
+function renderSpanTree(spans) {
+    const container = document.getElementById('spanTreeList');
+
+    if (!spans || spans.length === 0) {
+        container.innerHTML = '<p class="empty-message">No spans in trace</p>';
+        return;
     }
 
-    item.innerHTML = `
-        <div class="span-header">
-            <span class="span-service">${escapeHtml(span.service) || 'N/A'}</span>
-            <span class="span-duration">${formatDuration(span.duration)}</span>
-        </div>
-        <div class="span-resource">${escapeHtml(span.resource) || 'N/A'}</div>
-    `;
+    const flamegraphData = buildFlamegraphData(spans);
+    if (!flamegraphData) {
+        container.innerHTML = '<p class="empty-message">Unable to build flamegraph</p>';
+        return;
+    }
 
-    item.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectTraceSpan(span);
+    const { spans: spansWithDepth, traceDuration, maxDepth } = flamegraphData;
+
+    // SVG dimensions
+    const barHeight = 24;
+    const barGap = 2;
+    const rowHeight = barHeight + barGap;
+    const timeAxisHeight = 30;
+    const svgHeight = (maxDepth + 1) * rowHeight + timeAxisHeight + 10;
+    const svgWidth = container.clientWidth || 800;
+
+    // Create SVG
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', svgHeight);
+    svg.setAttribute('class', 'flamegraph-svg');
+
+    // Create time axis
+    const timeAxisGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    timeAxisGroup.setAttribute('class', 'time-axis');
+
+    // Background for time axis
+    const timeAxisBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    timeAxisBg.setAttribute('x', 0);
+    timeAxisBg.setAttribute('y', 0);
+    timeAxisBg.setAttribute('width', '100%');
+    timeAxisBg.setAttribute('height', timeAxisHeight);
+    timeAxisBg.setAttribute('fill', '#f8f9fa');
+    timeAxisGroup.appendChild(timeAxisBg);
+
+    // Time axis line
+    const axisLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    axisLine.setAttribute('x1', 0);
+    axisLine.setAttribute('y1', timeAxisHeight - 1);
+    axisLine.setAttribute('x2', '100%');
+    axisLine.setAttribute('y2', timeAxisHeight - 1);
+    axisLine.setAttribute('stroke', '#ddd');
+    axisLine.setAttribute('stroke-width', 1);
+    timeAxisGroup.appendChild(axisLine);
+
+    // Add time markers
+    const markerCount = 5;
+    for (let i = 0; i <= markerCount; i++) {
+        const x = (i / markerCount) * 100;
+        const timeValue = (traceDuration / markerCount) * i;
+
+        // Marker line
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        marker.setAttribute('x1', `${x}%`);
+        marker.setAttribute('y1', timeAxisHeight - 5);
+        marker.setAttribute('x2', `${x}%`);
+        marker.setAttribute('y2', timeAxisHeight - 1);
+        marker.setAttribute('stroke', '#999');
+        marker.setAttribute('stroke-width', 1);
+        timeAxisGroup.appendChild(marker);
+
+        // Marker text
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', `${x}%`);
+        text.setAttribute('y', timeAxisHeight - 10);
+        text.setAttribute('text-anchor', i === 0 ? 'start' : (i === markerCount ? 'end' : 'middle'));
+        text.setAttribute('font-size', '11');
+        text.setAttribute('fill', '#666');
+        text.textContent = formatDuration(timeValue);
+        timeAxisGroup.appendChild(text);
+    }
+
+    svg.appendChild(timeAxisGroup);
+
+    // Render spans as bars
+    spansWithDepth.forEach(span => {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', 'flamegraph-bar-group');
+        group.setAttribute('data-span-id', span.spanId);
+
+        const y = span.depth * rowHeight + timeAxisHeight;
+        const x = span.relativeStart * 100; // percentage
+        const width = span.relativeWidth * 100; // percentage
+
+        // Calculate absolute width for text clipping
+        const absoluteWidth = (span.relativeWidth * svgWidth);
+
+        // Create clipPath for text
+        const clipId = `clip-${span.spanId}`;
+        const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+        clipPath.setAttribute('id', clipId);
+        const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        clipRect.setAttribute('x', `${x}%`);
+        clipRect.setAttribute('y', y);
+        clipRect.setAttribute('width', `${width}%`);
+        clipRect.setAttribute('height', barHeight);
+        clipPath.appendChild(clipRect);
+        svg.appendChild(clipPath);
+
+        // Bar rectangle
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', `${x}%`);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', `${width}%`);
+        rect.setAttribute('height', barHeight);
+        rect.setAttribute('rx', 2);
+
+        const color = span.error ? '#e74c3c' : getServiceColor(span.service);
+        rect.setAttribute('fill', color);
+        rect.setAttribute('stroke', '#333');
+        rect.setAttribute('stroke-width', 1);
+        rect.setAttribute('class', 'flamegraph-bar-rect');
+
+        group.appendChild(rect);
+
+        // Text label (only if bar is wide enough)
+        if (absoluteWidth > 50) {
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', `${x}%`);
+            text.setAttribute('y', y + barHeight / 2 + 4);
+            text.setAttribute('font-size', '11');
+            text.setAttribute('fill', 'white');
+            text.setAttribute('clip-path', `url(#${clipId})`);
+            text.setAttribute('class', 'flamegraph-bar-text');
+            text.style.pointerEvents = 'none';
+
+            // Add padding to text
+            const textX = (span.relativeStart * svgWidth) + 4;
+            text.setAttribute('x', textX);
+
+            const label = `${span.service || 'N/A'} - ${span.name || span.resource || 'N/A'} (${formatDuration(span.duration)})`;
+            text.textContent = label;
+
+            group.appendChild(text);
+        }
+
+        // Tooltip title
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `${span.service || 'N/A'} - ${span.name || span.resource || 'N/A'}\nDuration: ${formatDuration(span.duration)}\nStart: ${formatDuration(span.start - flamegraphData.minStart)}`;
+        group.appendChild(title);
+
+        // Click handler
+        group.style.cursor = 'pointer';
+        group.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectTraceSpan(span);
+        });
+
+        // Hover effect
+        group.addEventListener('mouseenter', () => {
+            rect.setAttribute('filter', 'brightness(1.2)');
+            group.style.filter = 'brightness(1.2)';
+        });
+        group.addEventListener('mouseleave', () => {
+            rect.removeAttribute('filter');
+            group.style.filter = '';
+        });
+
+        // Highlight if selected
+        if (selectedTraceSpanId === span.spanId) {
+            rect.setAttribute('stroke', '#000');
+            rect.setAttribute('stroke-width', 3);
+        }
+
+        svg.appendChild(group);
     });
 
-    container.appendChild(item);
-
-    // Render children
-    if (span.children && span.children.length > 0) {
-        span.children.forEach(child => {
-            renderSpanTreeNode(child, depth + 1, container);
-        });
-    }
+    // Clear and render
+    container.innerHTML = '';
+    container.appendChild(svg);
 }
 
 // Select a span from trace view
 function selectTraceSpan(span) {
     selectedTraceSpanId = span.spanId;
 
-    // Update UI - need to re-render entire tree to update selection
-    document.querySelectorAll('#spanTreeList .list-item').forEach(item => {
-        item.classList.remove('selected');
+    // Update selection styling in SVG
+    document.querySelectorAll('#spanTreeList .flamegraph-bar-group').forEach(group => {
+        const rect = group.querySelector('.flamegraph-bar-rect');
+        if (group.dataset.spanId === span.spanId) {
+            rect.setAttribute('stroke', '#000');
+            rect.setAttribute('stroke-width', 3);
+        } else {
+            rect.setAttribute('stroke', '#333');
+            rect.setAttribute('stroke-width', 1);
+        }
     });
-    event.target.closest('.list-item')?.classList.add('selected');
 
     renderTraceSpanDetails(span);
 }
