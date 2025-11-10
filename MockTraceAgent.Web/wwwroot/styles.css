@@ -791,10 +791,36 @@ header h1 {
     border-color: #f39c12;
 }
 
+.item-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
 .item-time {
     font-size: 0.85rem;
     color: #666;
-    margin-bottom: 0.25rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-badge-new {
+    background: #27ae60;
+    color: white;
+}
+
+.status-badge-changed {
+    background: #f39c12;
+    color: white;
 }
 
 .item-info {

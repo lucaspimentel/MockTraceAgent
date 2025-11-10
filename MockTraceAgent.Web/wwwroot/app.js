@@ -180,8 +180,13 @@ function renderPayloadList() {
             ? `${payload.traceChunkCount} chunks, ${payload.totalSpanCount} spans`
             : formatBytes(payload.contentLength);
 
+        const unreadBadge = !viewedPayloads.has(payload.id) ? '<span class="status-badge status-badge-new">🆕 New</span>' : '';
+
         item.innerHTML = `
-            <div class="item-time">${escapeHtml(payload.receivedAt)}</div>
+            <div class="item-header-row">
+                <div class="item-time">${escapeHtml(payload.receivedAt)}</div>
+                ${unreadBadge}
+            </div>
             <div class="item-info item-info-monospace">${escapeHtml(payload.url)}</div>
             <div class="item-stats">${statsHtml}</div>
             <div class="item-actions">
@@ -412,23 +417,41 @@ function renderTraceList() {
         const previousSpanCount = traceSpanCounts.get(trace.traceId);
         const isViewed = viewedTraces.has(trace.traceId);
 
+        let isNew = false;
+        let isChanged = false;
+
         if (previousSpanCount === undefined) {
             // New trace - never seen before
+            isNew = true;
             item.classList.add('trace-new');
+            // Store initial count
             traceSpanCounts.set(trace.traceId, trace.spanCount);
         } else if (previousSpanCount !== trace.spanCount) {
             // Changed trace - span count increased
+            isChanged = true;
             item.classList.add('trace-changed');
-            traceSpanCounts.set(trace.traceId, trace.spanCount);
             // Remove from viewed set so user knows it changed
             viewedTraces.delete(trace.traceId);
+            // DON'T update stored count yet - wait until user views it
         } else if (!isViewed) {
             // Unviewed trace (was new before, now just unread)
+            isNew = true;
             item.classList.add('trace-new');
         }
 
+        // Determine status badge
+        let statusBadge = '';
+        if (isNew) {
+            statusBadge = '<span class="status-badge status-badge-new">🆕 New</span>';
+        } else if (isChanged) {
+            statusBadge = '<span class="status-badge status-badge-changed">🔄 Updated</span>';
+        }
+
         item.innerHTML = `
-            <div class="item-info"><strong>Trace ID:</strong> <span class="item-info-monospace">${escapeHtml(trace.traceId)}</span></div>
+            <div class="item-header-row">
+                <div class="item-info"><strong>Trace ID:</strong> <span class="item-info-monospace">${escapeHtml(trace.traceId)}</span></div>
+                ${statusBadge}
+            </div>
             <div class="item-stats">${trace.spanCount} spans</div>
             <div class="item-time">${escapeHtml(trace.lastSeen)}</div>
         `;
@@ -446,17 +469,21 @@ async function selectTrace(traceId) {
     // Mark as viewed
     viewedTraces.add(traceId);
 
-    // Update UI
-    renderTraceList();
-
-    // Load trace details
+    // Load trace details to get current span count
     try {
         const response = await fetch(`/api/traces/${traceId}`);
         const trace = await response.json();
+
+        // Update the stored span count now that user has viewed it
+        traceSpanCounts.set(traceId, trace.spanCount);
+
         renderSpanTree(trace.spans);
     } catch (err) {
         console.error("Error loading trace details:", err);
     }
+
+    // Update UI
+    renderTraceList();
 
     // Clear span details
     document.getElementById('traceSpanDetails').innerHTML = '<p class="empty-message">Select a span</p>';
