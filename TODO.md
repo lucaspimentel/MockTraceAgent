@@ -4,21 +4,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
 
 ## Features
 
-### 1. ~~Restore Payload Download Buttons~~ ✓ COMPLETED
-- **Priority**: High
-- **Description**: Add download buttons back to payload list items in Payloads view
-- **Details**:
-  - Lost during UI refactor
-  - Add "Download Raw" button (calls `/api/payloads/{id}/raw`)
-  - Add "Download JSON" button (calls `/api/payloads/{id}/json`)
-  - Place buttons within each payload list item for easy access
-  - Backend endpoints already exist, just need UI buttons
-- **Completed**: 2025-11-09
-  - Added "Raw" and "JSON" download buttons to each payload in the Payloads view
-  - Buttons styled consistently with blue theme
-  - Click handler updated to prevent selecting payload when clicking download buttons
-
-### 2. Show Span Details Under Flamegraph
+### 1. Show Span Details Under Flamegraph
 - **Priority**: High
 - **Description**: Display span details below the flamegraph in Traces view
 - **Details**:
@@ -27,7 +13,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - This provides better context when viewing the flamegraph
   - Consider layout: flamegraph on top, span details below within the same pane
 
-### 3. Support 128-bit Trace IDs
+### 2. Support 128-bit Trace IDs
 - **Priority**: High
 - **Description**: Add support for 128-bit trace IDs (currently only 64-bit)
 - **Details**:
@@ -37,7 +23,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Update display formatting for larger IDs
   - Ensure backwards compatibility with 64-bit trace IDs
 
-### 4. Load Traces from Files
+### 3. Load Traces from Files
 - **Priority**: High
 - **Description**: Allow loading traces from previously saved MessagePack or JSON files
 - **Details**:
@@ -47,7 +33,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - CLI: Add `--load <file>` option to load and display saved payloads
   - Validate file format before loading
 
-### 5. Flamegraph Enhancements
+### 4. Flamegraph Enhancements
 - **Priority**: Medium
 - **Description**: Improve flamegraph visualization
 - **Ideas**:
@@ -58,7 +44,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Show concurrent spans side-by-side instead of stacked
   - Add search/filter to highlight specific spans
 
-### 6. Trace Comparison
+### 5. Trace Comparison
 - **Priority**: Medium
 - **Description**: Compare two traces side-by-side
 - **Details**:
@@ -67,7 +53,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Highlight differences in span structure
   - Compare metrics (duration, span count, etc.)
 
-### 7. Persistent Storage
+### 6. Persistent Storage
 - **Priority**: Low
 - **Description**: Persist received traces across restarts
 - **Options**:
@@ -75,7 +61,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - File-based storage with indexing
   - Optional: Redis for distributed scenarios
 
-### 8. Real-time Statistics
+### 7. Real-time Statistics
 - **Priority**: Low
 - **Description**: Enhanced statistics and analytics
 - **Ideas**:
@@ -85,7 +71,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Throughput chart (traces/sec)
   - Top slowest spans
 
-### 9. Advanced Filtering
+### 8. Advanced Filtering
 - **Priority**: Medium
 - **Description**: Filter traces by various criteria
 - **Ideas**:
@@ -95,7 +81,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Filter by tags/metadata
   - Save filter presets
 
-### 10. Trace Export
+### 9. Trace Export
 - **Priority**: Low
 - **Description**: Export traces in various formats
 - **Formats**:
@@ -104,7 +90,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Jaeger format
   - Chrome Trace Viewer format
 
-### 11. CLI Improvements
+### 10. CLI Improvements
 - **Priority**: Medium
 - **Description**: Enhance CLI functionality
 - **Ideas**:
@@ -113,7 +99,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Export statistics to CSV/JSON
   - Filter by service/operation name
 
-### 12. Span Search
+### 11. Span Search
 - **Priority**: High
 - **Description**: Search spans across all traces
 - **Details**:
@@ -121,6 +107,17 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Search by service, resource, or operation name
   - Search by tag key/value
   - Full-text search in metadata
+
+### 12. Clear All Data
+- **Priority**: High
+- **Description**: Add a way to clear all data in the web UI and start over
+- **Details**:
+  - Add "Clear All" button in the web UI (likely in header or statistics area)
+  - Button should clear all payloads and traces from TraceStorageService
+  - Show confirmation dialog before clearing ("Are you sure?")
+  - Broadcast update to all connected clients via SignalR
+  - Reset statistics to zero
+  - Optional: Add API endpoint `/api/clear` for programmatic clearing
 
 ### 13. Performance Optimization
 - **Priority**: Low
