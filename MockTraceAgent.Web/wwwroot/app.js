@@ -63,6 +63,33 @@ connection.on("ReceiveTrace", (payload) => {
     }
 });
 
+// Handle data cleared event
+connection.on("DataCleared", () => {
+    console.log("Data cleared");
+    payloads = [];
+    traces = [];
+    viewedPayloads.clear();
+    viewedTraces.clear();
+    traceSpanCounts.clear();
+    selectedPayloadId = null;
+    selectedChunkIndex = null;
+    selectedPayloadSpanId = null;
+    selectedTraceId = null;
+    selectedTraceSpanId = null;
+    currentTraceChunks = null;
+    currentChunkSpans = null;
+
+    // Clear all UI components
+    renderPayloadList();
+    document.getElementById('chunkList').innerHTML = '<p class="empty-message">Select a payload</p>';
+    document.getElementById('spanList').innerHTML = '<p class="empty-message">Select a trace chunk</p>';
+    document.getElementById('payloadSpanDetails').innerHTML = '<p class="empty-message">Select a span</p>';
+    document.getElementById('traceList').innerHTML = '<p class="empty-message">No traces received yet</p>';
+    document.getElementById('spanTreeList').innerHTML = '<p class="empty-message">Select a trace</p>';
+    document.getElementById('traceSpanDetails').innerHTML = '<p class="empty-message">Select a span</p>';
+    updateStatistics();
+});
+
 // Connection handlers
 connection.onreconnecting(() => {
     console.log("SignalR reconnecting...");
@@ -960,11 +987,42 @@ function setupJsonModal() {
     });
 }
 
+// ============================================================================
+// CLEAR ALL DATA
+// ============================================================================
+
+async function clearAllData() {
+    if (!confirm('Are you sure you want to clear all trace data? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/clear', {
+            method: 'POST'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to clear data');
+        }
+
+        console.log('All data cleared successfully');
+    } catch (err) {
+        console.error('Error clearing data:', err);
+        alert(`Failed to clear data: ${err.message}`);
+    }
+}
+
+function setupClearAllButton() {
+    const clearBtn = document.getElementById('clearAllBtn');
+    clearBtn.addEventListener('click', clearAllData);
+}
+
 // Initialize
 setupViewSwitcher();
 setupUrlFilter();
 setupPayloadFilter();
 setupTraceFilter();
 setupJsonModal();
+setupClearAllButton();
 startConnection();
 

@@ -55,6 +55,11 @@ app.MapGet("/api/payloads/{id}/json", (string id, TraceStorageService storage, H
     return Results.Content(json, "application/json");
 });
 app.MapGet("/api/stats", (TraceStorageService storage) => storage.GetStatistics());
+app.MapPost("/api/clear", async (TraceStorageService storage) =>
+{
+    await storage.ClearAll();
+    return Results.Ok(new { message = "All data cleared successfully" });
+});
 
 // Aggregated traces endpoints
 app.MapGet("/api/traces", (TraceStorageService storage) => storage.GetAllAggregatedTraces());

@@ -187,4 +187,16 @@ public class TraceStorageService
         _traces.TryGetValue(traceId, out var trace);
         return trace;
     }
+
+    public async Task ClearAll()
+    {
+        _tracePayloads.Clear();
+        _traces.Clear();
+        Interlocked.Exchange(ref _totalBytes, 0);
+
+        // Broadcast clear event to all connected clients
+        await _hubContext.Clients.All.SendAsync("DataCleared");
+
+        _logger.LogInformation("All trace data cleared");
+    }
 }

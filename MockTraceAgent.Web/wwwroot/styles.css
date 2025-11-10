@@ -30,11 +30,33 @@ header h1 {
 .stats-bar {
     display: flex;
     gap: 2rem;
+    align-items: center;
 }
 
 .stat {
     display: flex;
     gap: 0.5rem;
+}
+
+.clear-all-btn {
+    margin-left: auto;
+    padding: 0.5rem 1rem;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.clear-all-btn:hover {
+    background: #c0392b;
+}
+
+.clear-all-btn:active {
+    background: #a93226;
 }
 
 .stat-label {
