@@ -108,7 +108,7 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Search by tag key/value
   - Full-text search in metadata
 
-### 12. Clear All Data
+### 12. ~~Clear All Data~~ ✓ COMPLETED
 - **Priority**: High
 - **Description**: Add a way to clear all data in the web UI and start over
 - **Details**:
@@ -118,6 +118,13 @@ This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md 
   - Broadcast update to all connected clients via SignalR
   - Reset statistics to zero
   - Optional: Add API endpoint `/api/clear` for programmatic clearing
+- **Completed**: 2025-11-10
+  - Added red "Clear All" button in header stats bar
+  - Implemented TraceStorageService.ClearAll() method
+  - Added POST /api/clear endpoint
+  - Added confirmation dialog before clearing
+  - SignalR broadcasts DataCleared event to all clients
+  - All UI components reset to empty state immediately
 
 ### 13. Performance Optimization
 - **Priority**: Low

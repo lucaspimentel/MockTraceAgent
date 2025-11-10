@@ -268,6 +268,10 @@ Explore aggregated traces across all payloads:
 - **Statistics Dashboard**: Total payloads, spans, and bytes
 - **Connection Status**: Real-time indicator with automatic reconnection
 - **Data Export**: Download raw MessagePack (.bin) or JSON (.json) for any payload
+- **Clear All Data**: Red button in header to clear all stored payloads and traces
+  - Shows confirmation dialog before clearing
+  - Broadcasts to all connected clients via SignalR
+  - Immediately resets all UI components
 
 ## REST API Endpoints
 
@@ -371,6 +375,25 @@ Get aggregate statistics.
 }
 ```
 
+### Data Management Endpoint
+
+#### POST /api/clear
+Clear all stored payloads and traces.
+
+**Response**: Success message
+```json
+{
+  "message": "All data cleared successfully"
+}
+```
+
+**Behavior**:
+- Clears all payloads from `_tracePayloads` dictionary
+- Clears all aggregated traces from `_traces` dictionary
+- Resets `_totalBytes` counter to zero
+- Broadcasts `DataCleared` event to all connected SignalR clients
+- All connected web clients automatically reset their UI
+
 ### SignalR Hub: /hubs/traces
 Real-time events for connected clients.
 
@@ -378,5 +401,13 @@ Real-time events for connected clients.
 ```javascript
 connection.on("ReceiveTrace", (payload) => {
   // payload object contains: id, receivedAt, url, contentLength, traceChunkCount, totalSpanCount
+});
+```
+
+**Event**: `DataCleared` - Fired when all data is cleared
+```javascript
+connection.on("DataCleared", () => {
+  // All payloads and traces have been cleared
+  // Client should reset UI and local state
 });
 ```
