@@ -386,20 +386,22 @@ function renderPayloadSpanDetails(span) {
 
     if (span.tags && Object.keys(span.tags).length > 0) {
         html += '<div class="detail-section"><h4>Meta</h4>';
+        html += '<table class="detail-table"><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>';
         const sortedTags = Object.entries(span.tags).sort(([a], [b]) => a.localeCompare(b));
         for (const [key, value] of sortedTags) {
-            html += `<div class="detail-row"><span class="detail-label detail-label-monospace">${escapeHtml(key)}:</span><span class="detail-value detail-value-monospace">${escapeHtml(value)}</span></div>`;
+            html += `<tr><td class="detail-table-key">${escapeHtml(key)}</td><td class="detail-table-value">${escapeHtml(value)}</td></tr>`;
         }
-        html += '</div>';
+        html += '</tbody></table></div>';
     }
 
     if (span.metrics && Object.keys(span.metrics).length > 0) {
         html += '<div class="detail-section"><h4>Metrics</h4>';
+        html += '<table class="detail-table"><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>';
         const sortedMetrics = Object.entries(span.metrics).sort(([a], [b]) => a.localeCompare(b));
         for (const [key, value] of sortedMetrics) {
-            html += `<div class="detail-row"><span class="detail-label detail-label-monospace">${escapeHtml(key)}:</span><span class="detail-value detail-value-monospace">${value}</span></div>`;
+            html += `<tr><td class="detail-table-key">${escapeHtml(key)}</td><td class="detail-table-value">${value}</td></tr>`;
         }
-        html += '</div>';
+        html += '</tbody></table></div>';
     }
 
     details.innerHTML = html;
@@ -820,20 +822,22 @@ function renderTraceSpanDetails(span) {
 
     if (span.tags && Object.keys(span.tags).length > 0) {
         html += '<div class="detail-section"><h4>Meta</h4>';
+        html += '<table class="detail-table"><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>';
         const sortedTags = Object.entries(span.tags).sort(([a], [b]) => a.localeCompare(b));
         for (const [key, value] of sortedTags) {
-            html += `<div class="detail-row"><span class="detail-label detail-label-monospace">${escapeHtml(key)}:</span><span class="detail-value detail-value-monospace">${escapeHtml(value)}</span></div>`;
+            html += `<tr><td class="detail-table-key">${escapeHtml(key)}</td><td class="detail-table-value">${escapeHtml(value)}</td></tr>`;
         }
-        html += '</div>';
+        html += '</tbody></table></div>';
     }
 
     if (span.metrics && Object.keys(span.metrics).length > 0) {
         html += '<div class="detail-section"><h4>Metrics</h4>';
+        html += '<table class="detail-table"><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>';
         const sortedMetrics = Object.entries(span.metrics).sort(([a], [b]) => a.localeCompare(b));
         for (const [key, value] of sortedMetrics) {
-            html += `<div class="detail-row"><span class="detail-label detail-label-monospace">${escapeHtml(key)}:</span><span class="detail-value detail-value-monospace">${value}</span></div>`;
+            html += `<tr><td class="detail-table-key">${escapeHtml(key)}</td><td class="detail-table-value">${value}</td></tr>`;
         }
-        html += '</div>';
+        html += '</tbody></table></div>';
     }
 
     details.innerHTML = html;

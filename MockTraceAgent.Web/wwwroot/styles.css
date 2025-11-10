@@ -959,6 +959,49 @@ header h1 {
     font-family: 'Courier New', Consolas, Monaco, monospace;
 }
 
+/* Table layout for meta and metrics */
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+}
+
+.detail-table th {
+    text-align: left;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-bottom: 2px solid #ddd;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.detail-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+    font-size: 0.85rem;
+    color: #2c3e50;
+}
+
+.detail-table tr:last-child td {
+    border-bottom: none;
+}
+
+.detail-table tr:hover {
+    background: #f8f9fa;
+}
+
+.detail-table-key {
+    font-weight: 600;
+    color: #555;
+    width: 40%;
+}
+
+.detail-table-value {
+    word-break: break-word;
+}
+
 .detail-label-monospace {
     font-family: 'Courier New', Consolas, Monaco, monospace;
 }
