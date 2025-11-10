@@ -46,6 +46,8 @@ MockTraceAgent/
     │   └── TraceStorageService.cs      # In-memory storage + trace aggregation
     ├── Models/
     │   └── TraceData.cs            # Data models (PayloadData, AggregatedTrace, etc.)
+    ├── Serialization/
+    │   └── ULongToStringConverter.cs   # JSON converter for large integers
     └── wwwroot/                     # Static web files
         ├── index.html               # Dual-view UI (Payloads + Traces)
         ├── styles.css               # Responsive 3-pane and 4-pane layouts
@@ -107,6 +109,17 @@ dotnet run --project MockTraceAgent.Web/MockTraceAgent.Web.csproj
 **Important**: CLI and Web applications cannot run simultaneously on the same port. If both need to run, configure them to use different ports via `--port` (CLI) or `appsettings.json` (Web).
 
 ## Architecture
+
+### Large Integer Serialization
+
+Datadog trace and span IDs are 64-bit unsigned integers (`ulong` in C#) that can exceed JavaScript's `Number.MAX_SAFE_INTEGER` (2^53-1). To prevent precision loss when these IDs are sent to the web frontend:
+
+- **Problem**: JavaScript numbers are IEEE 754 doubles and cannot safely represent integers larger than 2^53-1
+- **Solution**: Custom JSON converters (`ULongToStringConverter`, `NullableULongToStringConverter`) serialize all `ulong` values as strings
+- **Configuration**: Converters are registered in `Program.cs` for both HTTP JSON responses and SignalR messages
+- **JavaScript**: IDs are handled as strings throughout the frontend (display, comparisons, data attributes)
+
+This ensures trace IDs like `3952721205492360920` are preserved exactly rather than being rounded to `3952721205492360700`.
 
 ### MockTraceAgent.Core (Shared Library)
 

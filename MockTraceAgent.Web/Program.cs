@@ -1,10 +1,24 @@
 using MockTraceAgent.Web.Hubs;
 using MockTraceAgent.Web.Services;
+using MockTraceAgent.Web.Serialization;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure JSON serialization to handle large integers as strings
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new ULongToStringConverter());
+    options.SerializerOptions.Converters.Add(new NullableULongToStringConverter());
+});
+
 // Add services to the container
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.Converters.Add(new ULongToStringConverter());
+        options.PayloadSerializerOptions.Converters.Add(new NullableULongToStringConverter());
+    });
 builder.Services.AddSingleton<TraceStorageService>();
 builder.Services.AddHostedService<TraceAgentHostedService>();
 
@@ -78,7 +92,7 @@ app.MapGet("/api/traces/{traceId}", (string traceId, TraceStorageService storage
 
     return Results.Ok(new
     {
-        traceId = trace.TraceId.ToString(),
+        traceId = trace.TraceId,
         spans = trace.Spans,
         spanCount = trace.SpanCount,
         firstSeen = trace.FirstSeen.ToString("yyyy-MM-dd HH:mm:ss.ff"),
