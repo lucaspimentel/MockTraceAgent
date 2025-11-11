@@ -377,10 +377,10 @@ function renderPayloadSpanDetails(span) {
             <div class="detail-row"><span class="detail-label">Service:</span><span class="detail-value">${escapeHtml(span.service) || 'N/A'}</span></div>
             <div class="detail-row"><span class="detail-label">Resource:</span><span class="detail-value">${escapeHtml(span.resource) || 'N/A'}</span></div>
             <div class="detail-row"><span class="detail-label">Name:</span><span class="detail-value">${escapeHtml(span.name) || 'N/A'}</span></div>
-            <div class="detail-row"><span class="detail-label">Type:</span><span class="detail-value">${escapeHtml(span.type) || 'N/A'}</span></div>
+            ${span.type ? `<div class="detail-row"><span class="detail-label">Type:</span><span class="detail-value">${escapeHtml(span.type)}</span></div>` : ''}
             <div class="detail-row"><span class="detail-label">Duration:</span><span class="detail-value">${formatDuration(span.duration)}</span></div>
             <div class="detail-row"><span class="detail-label">Start:</span><span class="detail-value">${startTime}</span></div>
-            <div class="detail-row"><span class="detail-label">Error:</span><span class="detail-value ${span.error ? 'error-text' : ''}">${span.error ? 'Yes' : 'No'}</span></div>
+            ${span.error ? `<div class="detail-row"><span class="detail-label">Error:</span><span class="detail-value error-text">Yes</span></div>` : ''}
         </div>
     `;
 
@@ -813,10 +813,10 @@ function renderTraceSpanDetails(span) {
             <div class="detail-row"><span class="detail-label">Service:</span><span class="detail-value">${escapeHtml(span.service) || 'N/A'}</span></div>
             <div class="detail-row"><span class="detail-label">Resource:</span><span class="detail-value">${escapeHtml(span.resource) || 'N/A'}</span></div>
             <div class="detail-row"><span class="detail-label">Name:</span><span class="detail-value">${escapeHtml(span.name) || 'N/A'}</span></div>
-            <div class="detail-row"><span class="detail-label">Type:</span><span class="detail-value">${escapeHtml(span.type) || 'N/A'}</span></div>
+            ${span.type ? `<div class="detail-row"><span class="detail-label">Type:</span><span class="detail-value">${escapeHtml(span.type)}</span></div>` : ''}
             <div class="detail-row"><span class="detail-label">Duration:</span><span class="detail-value">${formatDuration(span.duration)}</span></div>
             <div class="detail-row"><span class="detail-label">Start:</span><span class="detail-value">${startTime}</span></div>
-            <div class="detail-row"><span class="detail-label">Error:</span><span class="detail-value ${span.error ? 'error-text' : ''}">${span.error ? 'Yes' : 'No'}</span></div>
+            ${span.error ? `<div class="detail-row"><span class="detail-label">Error:</span><span class="detail-value error-text">Yes</span></div>` : ''}
         </div>
     `;
 
