@@ -341,6 +341,7 @@ function renderSpanList() {
                 <span class="span-duration">${formatDuration(span.duration)}</span>
             </div>
             <div class="span-resource">${escapeHtml(span.resource) || 'N/A'}</div>
+            <div class="item-info" style="margin-top: 0.5rem; font-size: 0.8rem;"><strong>Span ID:</strong> <span class="item-info-monospace">${span.spanId}</span></div>
         `;
 
         item.addEventListener('click', () => selectPayloadSpan(span));
