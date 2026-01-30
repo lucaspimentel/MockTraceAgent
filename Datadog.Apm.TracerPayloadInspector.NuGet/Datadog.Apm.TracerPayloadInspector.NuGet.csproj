@@ -5,19 +5,29 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
 
+    <!-- Code analysis -->
+    <AnalysisLevel>latest</AnalysisLevel>
+
     <!-- NuGet Package Metadata -->
     <PackageId>LucasP.Datadog.Apm.TracerPayloadInspector</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>Lucas Pimentel</Authors>
+    <Authors>Lucas Pimentel, Datadog</Authors>
     <Description>Embeddable Datadog tracer payload inspector for .NET applications. Add TracerPayloadInspector to your Azure Functions, console apps, or ASP.NET applications to capture and inspect APM trace payloads. Uses Microsoft.Extensions.Hosting integration for easy dependency injection.</Description>
-    <Copyright>Copyright (c) Lucas Pimentel 2025</Copyright>
+    <Copyright>Copyright (c) 2025 Lucas Pimentel 2025; 2013 Datadog, Inc.</Copyright>
     <PackageTags>datadog traces apm telemetry observability debugging diagnostics inspector</PackageTags>
     <PackageProjectUrl>https://github.com/lucaspimentel/MockTraceAgent</PackageProjectUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <RepositoryUrl>https://github.com/lucaspimentel/MockTraceAgent</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Initial release with IHostedService integration for easy embedding in .NET applications.</PackageReleaseNotes>
+    <PackageTags>Datadog;APM;tracing</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!-- Deterministic builds -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true' OR '$(TF_BUILD)' == 'true' OR '$(GITLAB_CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>
