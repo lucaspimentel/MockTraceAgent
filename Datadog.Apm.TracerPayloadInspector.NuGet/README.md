@@ -32,7 +32,7 @@ var host = new HostBuilder()
     {
         services.AddTracerPayloadInspector(options =>
         {
-            options.Port = 8126;
+            options.ListeningPort = 8126;
         });
     })
     .Build();
@@ -50,11 +50,11 @@ var host = Host.CreateDefaultBuilder(args)
     {
         services.AddTracerPayloadInspector(options =>
         {
-            options.Port = 8126;
-            options.RequestReceivedCallback = (url, length, bytes) =>
+            options.ListeningPort = 8126;
+            options.RequestReceivedCallback = args =>
             {
                 // Optional: log or process received traces
-                Console.WriteLine($"Received {length} bytes at {url}");
+                Console.WriteLine($"Received {args.Length} bytes at {args.Url}");
             };
         });
     })
@@ -72,7 +72,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddTracerPayloadInspector(options =>
 {
-    options.Port = 8126;
+    options.ListeningPort = 8126;
 });
 
 var app = builder.Build();
@@ -83,67 +83,78 @@ app.Run();
 
 ### TracerPayloadInspectorOptions
 
-- **Port** (int): The port to listen on for trace requests. Default: `8126`
-- **RequestReceivedCallback** (Action<string, int, ReadOnlyMemory<byte>>?): Optional callback invoked when traces are received. Parameters are URL, content length, and request body bytes.
+- **ListeningPort** (int): The port to listen on for trace requests. Default: `8126`
+- **DeserializeContents** (bool): When `true`, automatically deserializes MessagePack payloads and provides parsed span data in the callback. Default: `false`
+- **RequestReceivedCallback** (Action<RequestReceivedCallbackArgs>?): Optional callback invoked when traces are received. Provides URL, content length, raw bytes, and optionally deserialized trace chunks (if `DeserializeContents` is enabled).
 
-## Deserializing Trace Payloads
+## Inspecting and Processing Trace Payloads
 
-If you want to inspect the trace data in your callback, you can deserialize the MessagePack payload:
+Enable `DeserializeContents` to automatically deserialize MessagePack payloads and access parsed span data:
 
 ```csharp
 using Datadog.Apm.TracerPayloadInspector;
 using Datadog.Apm.TracerPayloadInspector.Core;
-using MessagePack;
 
 builder.Services.AddTracerPayloadInspector(options =>
 {
-    options.Port = 8126;
-    options.RequestReceivedCallback = (url, length, bytes) =>
+    options.ListeningPort = 8126;
+    options.DeserializeContents = true;
+    options.RequestReceivedCallback = args =>
     {
-        try
+        Console.WriteLine($"Received {args.Length} bytes at {args.Url}");
+
+        if (args.TraceChunks is not null)
         {
-            if (bytes.Length > 0 && url == "/v0.4/traces")
+            Console.WriteLine($"  {args.ChunkCount} trace chunks with {args.TotalSpanCount} total spans");
+
+            foreach (var chunk in args.TraceChunks)
             {
-                var now = DateTime.Now;
-                var filenameUrlPart = url.TrimStart('/').Replace('/', '_');
-
-                // Deserialize and inspect the trace data
-                var traceChunks = MessagePackSerializer.Deserialize<IList<IList<Span>>>(bytes);
-                var traceChunkCount = traceChunks.Count;
-                var totalSpanCount = traceChunks.Sum(t => t.Count);
-
-                Console.WriteLine($"Received {traceChunkCount} trace chunks with {totalSpanCount} total spans");
-
-                foreach (var chunk in traceChunks)
+                foreach (var span in chunk)
                 {
-                    foreach (var span in chunk)
-                    {
-                        Console.WriteLine($"  Span: {span.Service}.{span.Name} (trace_id={span.TraceId}, span_id={span.SpanId})");
-                    }
+                    Console.WriteLine($"  Span: {span.Service}.{span.Name} (trace_id={span.TraceId}, span_id={span.SpanId})");
                 }
-
-                // Save raw MessagePack bytes to file
-                var msgpackFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.bin";
-                using var msgpackFileStream = File.Create(msgpackFilename);
-                msgpackFileStream.Write(bytes.Span);
-                Console.WriteLine($"Saved raw bytes to \"{msgpackFilename}\"");
-
-                // Convert to JSON and save to file
-                var jsonFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.json";
-                string json = MessagePackSerializer.ConvertToJson(bytes);
-                File.WriteAllText(jsonFilename, json);
-                Console.WriteLine($"Saved JSON to \"{jsonFilename}\"");
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to process payload: {ex.Message}");
         }
     };
 });
 ```
 
-**Note**: Requires `MessagePack` NuGet package (version 2.x).
+### Saving Payloads to Files
+
+You can save received payloads to files for offline analysis:
+
+```csharp
+using Datadog.Apm.TracerPayloadInspector;
+using MessagePack;
+
+builder.Services.AddTracerPayloadInspector(options =>
+{
+    options.ListeningPort = 8126;
+    options.DeserializeContents = true;
+    options.RequestReceivedCallback = args =>
+    {
+        if (args.Contents.Length > 0 && args.Url == "/v0.4/traces")
+        {
+            var now = DateTime.Now;
+            var filenameUrlPart = args.Url.TrimStart('/').Replace('/', '_');
+
+            // Save raw MessagePack bytes
+            var msgpackFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.bin";
+            using var msgpackFileStream = File.Create(msgpackFilename);
+            msgpackFileStream.Write(args.Contents.Span);
+            Console.WriteLine($"Saved raw bytes to \"{msgpackFilename}\"");
+
+            // Convert to JSON and save
+            var jsonFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.json";
+            string json = MessagePackSerializer.ConvertToJson(args.Contents);
+            File.WriteAllText(jsonFilename, json);
+            Console.WriteLine($"Saved JSON to \"{jsonFilename}\"");
+        }
+    };
+});
+```
+
+**Note**: JSON conversion requires `MessagePack` NuGet package (version 2.x).
 
 ## How It Works
 
