@@ -1,0 +1,56 @@
+name: Build NuGet Package
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.0, v1.2.3, v1.0.0-beta1, etc.
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          # Remove 'v' prefix from tag to get version (e.g., v1.0.0 -> 1.0.0)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Restore dependencies
+        run: dotnet restore Datadog.Apm.TracerPayloadInspector.NuGet/Datadog.Apm.TracerPayloadInspector.NuGet.csproj
+
+      - name: Build
+        run: dotnet build Datadog.Apm.TracerPayloadInspector.NuGet/Datadog.Apm.TracerPayloadInspector.NuGet.csproj -c Release --no-restore
+
+      - name: Pack NuGet package
+        run: |
+          dotnet pack Datadog.Apm.TracerPayloadInspector.NuGet/Datadog.Apm.TracerPayloadInspector.NuGet.csproj \
+            -c Release \
+            --no-build \
+            -p:PackageVersion=${{ steps.get_version.outputs.version }} \
+            -o ./nupkg
+
+      - name: Upload NuGet package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: ./nupkg/*.nupkg
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./nupkg/*.nupkg
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
