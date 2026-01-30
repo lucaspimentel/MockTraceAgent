@@ -3,5 +3,6 @@
 .vscode
 bin/
 obj/
+artifacts/
 payload*.bin
 payload*.json
