@@ -1,16 +1,16 @@
-# MockTraceAgent.Cli
+# Datadog.Apm.TracerPayloadInspector.Cli
 
-Command-line application for inspecting Datadog trace payloads.
+Command-line application for inspecting Datadog tracer payloads.
 
 ## Description
 
-CLI tool that listens for HTTP requests containing MessagePack-encoded trace payloads. It can display trace statistics, save raw payloads, and convert them to JSON for inspection.
+CLI tool that listens for HTTP requests containing MessagePack-encoded tracer payloads. It can display trace statistics, save raw payloads, and convert them to JSON for inspection.
 
 ## Usage
 
 ```
 USAGE:
-    MockTraceAgent.Cli.dll [OPTIONS]
+    Datadog.Apm.TracerPayloadInspector.Cli.dll [OPTIONS]
 
 OPTIONS:
                          DEFAULT
@@ -63,7 +63,7 @@ URL filter for processing payloads. Only payloads with URLs containing this stri
 - **Spectre.Console.Cli** (0.53.0) - CLI argument parsing and formatting
 
 ### Project References
-- **MockTraceAgent.Core** - Core trace processing logic (includes MessagePack deserialization)
+- **Datadog.Apm.TracerPayloadInspector.Core** - Core trace processing logic (includes MessagePack deserialization)
 
 ## Dependents
 

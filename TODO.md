@@ -1,6 +1,6 @@
 # TODO - Future Improvements
 
-This file tracks ideas for future enhancements to MockTraceAgent. See CLAUDE.md for current project documentation.
+This file tracks ideas for future enhancements to TracerPayloadInspector. See CLAUDE.md for current project documentation.
 
 ## Features
 

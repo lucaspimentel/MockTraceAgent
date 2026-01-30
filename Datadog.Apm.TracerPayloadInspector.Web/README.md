@@ -1,14 +1,14 @@
-# MockTraceAgent.Web
+# Datadog.Apm.TracerPayloadInspector.Web
 
-Web application with real-time visualization of Datadog trace payloads.
+Web application with real-time visualization of Datadog tracer payloads.
 
 ## Description
 
-ASP.NET Core web application that provides a browser-based UI for inspecting trace payloads in real-time. Features dual-view interface (Payloads and Traces views), SignalR-based live updates, and REST API for programmatic access.
+ASP.NET Core web application that provides a browser-based UI for inspecting tracer payloads in real-time. Features dual-view interface (Payloads and Traces views), SignalR-based live updates, and REST API for programmatic access.
 
 ## Features
 
-- **Real-time trace payload visualization** with SignalR push updates
+- **Real-time tracer payload visualization** with SignalR push updates
 - **Dual-view interface**:
   - Payloads View (4-pane): Drill down through payloads → chunks → spans → details
   - Traces View (3-pane): Aggregated traces with SVG flamegraph visualization
@@ -23,10 +23,10 @@ ASP.NET Core web application that provides a browser-based UI for inspecting tra
 
 ```bash
 # Run web application
-dotnet run
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Web.csproj
 
 # Access web UI at http://localhost:5000
-# Trace agent listens on port 8126 (configurable in appsettings.json)
+# Payload inspector listens on port 8126 (configurable in appsettings.json)
 ```
 
 ## Dependencies
@@ -36,7 +36,7 @@ dotnet run
 - ASP.NET Core framework (included in .NET 9.0 SDK) - Web hosting, SignalR
 
 ### Project References
-- **MockTraceAgent.Core** - Core trace processing logic
+- **Datadog.Apm.TracerPayloadInspector.Core** - Core trace processing logic
 
 ## Dependents
 
