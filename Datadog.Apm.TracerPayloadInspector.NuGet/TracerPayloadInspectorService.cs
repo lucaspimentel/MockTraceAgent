@@ -38,8 +38,14 @@ public sealed class TracerPayloadInspectorService : IHostedService, IDisposable
         }
         else
         {
-            requestReceivedCallback =
-                (url, length, contents) => RequestReceivedCallback(_options, _logger, url, length, contents);
+            requestReceivedCallback = (url, length, contents) =>
+                                          RequestReceivedCallback(
+                                              _options.DeserializeContents,
+                                              _options.RequestReceivedCallback,
+                                              _logger,
+                                              url,
+                                              length,
+                                              contents);
             readRequestBytes = true;
         }
 
@@ -48,25 +54,56 @@ public sealed class TracerPayloadInspectorService : IHostedService, IDisposable
     }
 
     private static void RequestReceivedCallback(
-        TracerPayloadInspectorOptions options,
+        bool deserializeContents,
+        Action<RequestReceivedCallbackArgs> optionsRequestReceivedCallback,
         ILogger<TracerPayloadInspectorService> logger,
         string url,
         int length,
         ReadOnlyMemory<byte> contents)
     {
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Received request: {Url}, Length: {Length} bytes", url, length);
+        }
+
         IReadOnlyList<IReadOnlyList<Span>>? traceChunks = null;
         int? chunkCount = null;
         int? totalSpanCount = null;
 
-        if (options.DeserializeContents && contents.Length > 0 && url == "/v0.4/traces")
+        if (deserializeContents && contents.Length > 0 && url == "/v0.4/traces")
         {
-            traceChunks = MessagePackSerializer.Deserialize<IReadOnlyList<IReadOnlyList<Span>>>(contents);
-            chunkCount = traceChunks.Count;
-            totalSpanCount = traceChunks.Sum(t => t.Count);
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("Attempting to deserialize MessagePack payload from tracer ({Length:N0} bytes)", contents.Length);
+            }
+
+            try
+            {
+                traceChunks = MessagePackSerializer.Deserialize<IReadOnlyList<IReadOnlyList<Span>>>(contents);
+                chunkCount = traceChunks.Count;
+                totalSpanCount = traceChunks.Sum(t => t.Count);
+
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug("Successfully deserialized {ChunkCount} trace chunks with {SpanCount} total spans", chunkCount, totalSpanCount);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to deserialize MessagePack payload from tracer ({Length} bytes)", length);
+            }
         }
 
-        var callbackArgs = new RequestReceivedCallbackArgs(url, length, contents, traceChunks, chunkCount, totalSpanCount);
-        options.RequestReceivedCallback?.Invoke(callbackArgs);
+        try
+        {
+            logger.LogDebug("Invoking RequestReceivedCallback");
+            var callbackArgs = new RequestReceivedCallbackArgs(url, length, contents, traceChunks, chunkCount, totalSpanCount);
+            optionsRequestReceivedCallback(callbackArgs);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception in RequestReceivedCallback for {Url}", url);
+        }
     }
 
 
