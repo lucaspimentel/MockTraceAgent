@@ -2,6 +2,9 @@ namespace Datadog.Apm.TracerPayloadInspector;
 
 public class TracerPayloadInspectorOptions
 {
-    public int Port { get; set; } = 8126;
-    public Action<string, int, ReadOnlyMemory<byte>>? RequestReceivedCallback { get; set; }
+    public int ListeningPort { get; set; } = 8126;
+
+    public bool DeserializeContents { get; set; }
+
+    public Action<RequestReceivedCallbackArgs>? RequestReceivedCallback { get; set; }
 }
