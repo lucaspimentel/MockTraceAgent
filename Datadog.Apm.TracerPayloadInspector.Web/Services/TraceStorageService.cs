@@ -30,7 +30,7 @@ public class TraceStorageService
             var rawBytes = contents.ToArray();
 
             // Try to deserialize the trace
-            IList<IList<Span>>? traceChunks = null;
+            IReadOnlyList<IReadOnlyList<Span>>? traceChunks = null;
             int traceChunkCount = 0;
             int totalSpanCount = 0;
 
@@ -38,7 +38,7 @@ public class TraceStorageService
             {
                 if (contents.Length > 0 && url == "/v0.4/traces")
                 {
-                    traceChunks = MessagePackSerializer.Deserialize<IList<IList<Span>>>(contents);
+                    traceChunks = MessagePackSerializer.Deserialize<IReadOnlyList<IReadOnlyList<Span>>>(contents);
                     traceChunkCount = traceChunks.Count;
                     totalSpanCount = traceChunks.Sum(t => t.Count);
                 }

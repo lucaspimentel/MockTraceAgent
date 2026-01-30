@@ -104,7 +104,7 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
             {
                 if (settings.ShowCounts && url == "/v0.4/traces")
                 {
-                    var traceChunks = MessagePackSerializer.Deserialize<IList<IList<Span>>>(contents);
+                    var traceChunks = MessagePackSerializer.Deserialize<IReadOnlyList<IReadOnlyList<Span>>>(contents);
                     int chunkCount = traceChunks.Count;
                     int spanCount = traceChunks.Sum(t => t.Count);
 
