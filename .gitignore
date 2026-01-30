@@ -4,5 +4,7 @@
 bin/
 obj/
 artifacts/
+*.user
+*.suo
 payload*.bin
 payload*.json
