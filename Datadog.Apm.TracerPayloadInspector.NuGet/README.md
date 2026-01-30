@@ -86,6 +86,65 @@ app.Run();
 - **Port** (int): The port to listen on for trace requests. Default: `8126`
 - **RequestReceivedCallback** (Action<string, int, ReadOnlyMemory<byte>>?): Optional callback invoked when traces are received. Parameters are URL, content length, and request body bytes.
 
+## Deserializing Trace Payloads
+
+If you want to inspect the trace data in your callback, you can deserialize the MessagePack payload:
+
+```csharp
+using Datadog.Apm.TracerPayloadInspector;
+using Datadog.Apm.TracerPayloadInspector.Core;
+using MessagePack;
+
+builder.Services.AddTracerPayloadInspector(options =>
+{
+    options.Port = 8126;
+    options.RequestReceivedCallback = (url, length, bytes) =>
+    {
+        try
+        {
+            if (bytes.Length > 0 && url == "/v0.4/traces")
+            {
+                var now = DateTime.Now;
+                var filenameUrlPart = url.TrimStart('/').Replace('/', '_');
+
+                // Deserialize and inspect the trace data
+                var traceChunks = MessagePackSerializer.Deserialize<IList<IList<Span>>>(bytes);
+                var traceChunkCount = traceChunks.Count;
+                var totalSpanCount = traceChunks.Sum(t => t.Count);
+
+                Console.WriteLine($"Received {traceChunkCount} trace chunks with {totalSpanCount} total spans");
+
+                foreach (var chunk in traceChunks)
+                {
+                    foreach (var span in chunk)
+                    {
+                        Console.WriteLine($"  Span: {span.Service}.{span.Name} (trace_id={span.TraceId}, span_id={span.SpanId})");
+                    }
+                }
+
+                // Save raw MessagePack bytes to file
+                var msgpackFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.bin";
+                using var msgpackFileStream = File.Create(msgpackFilename);
+                msgpackFileStream.Write(bytes.Span);
+                Console.WriteLine($"Saved raw bytes to \"{msgpackFilename}\"");
+
+                // Convert to JSON and save to file
+                var jsonFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.json";
+                string json = MessagePackSerializer.ConvertToJson(bytes);
+                File.WriteAllText(jsonFilename, json);
+                Console.WriteLine($"Saved JSON to \"{jsonFilename}\"");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process payload: {ex.Message}");
+        }
+    };
+});
+```
+
+**Note**: Requires `MessagePack` NuGet package (version 2.x).
+
 ## How It Works
 
 TracerPayloadInspector starts an HTTP listener on the configured port that accepts Datadog trace payloads in MessagePack format. It responds with a simple JSON acknowledgment, allowing your Datadog tracer to continue sending traces without errors.
