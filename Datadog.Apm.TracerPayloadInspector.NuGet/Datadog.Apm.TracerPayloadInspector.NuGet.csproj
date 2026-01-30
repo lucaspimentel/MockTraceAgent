@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Datadog.Apm.TracerPayloadInspector</RootNamespace>
 
     <!-- Code analysis -->
     <AnalysisLevel>latest</AnalysisLevel>
