@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using MessagePack;
 using System.Diagnostics;
 
-namespace MockTraceAgent.Core
+namespace Datadog.Apm.TracerPayloadInspector.Core
 {
     [MessagePackObject]
     [DebuggerDisplay("TraceId={TraceId}, SpanId={SpanId}, Service={Service}, Name={Name}, Resource={Resource}")]

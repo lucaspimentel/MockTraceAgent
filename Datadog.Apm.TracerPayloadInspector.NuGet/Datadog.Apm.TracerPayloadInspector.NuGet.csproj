@@ -6,12 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
 
     <!-- NuGet Package Metadata -->
-    <PackageId>LucasP.MockTraceAgent</PackageId>
+    <PackageId>LucasP.Datadog.Apm.TracerPayloadInspector</PackageId>
     <Version>1.0.0</Version>
     <Authors>Lucas Pimentel</Authors>
-    <Description>Embeddable mock Datadog trace agent for .NET applications. Add MockTraceAgent to your Azure Functions, console apps, or ASP.NET applications for in-process trace inspection. Uses Microsoft.Extensions.Hosting integration for easy dependency injection.</Description>
+    <Description>Embeddable Datadog tracer payload inspector for .NET applications. Add TracerPayloadInspector to your Azure Functions, console apps, or ASP.NET applications to capture and inspect APM trace payloads. Uses Microsoft.Extensions.Hosting integration for easy dependency injection.</Description>
     <Copyright>Copyright (c) Lucas Pimentel 2025</Copyright>
-    <PackageTags>datadog traces apm mock telemetry observability testing</PackageTags>
+    <PackageTags>datadog traces apm telemetry observability debugging diagnostics inspector</PackageTags>
     <PackageProjectUrl>https://github.com/lucaspimentel/MockTraceAgent</PackageProjectUrl>
     <RepositoryUrl>https://github.com/lucaspimentel/MockTraceAgent</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../MockTraceAgent.Core/MockTraceAgent.Core.csproj">
+    <ProjectReference Include="../Datadog.Apm.TracerPayloadInspector.Core/Datadog.Apm.TracerPayloadInspector.Core.csproj">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </ProjectReference>

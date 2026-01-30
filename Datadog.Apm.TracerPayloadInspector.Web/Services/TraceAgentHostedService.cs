@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
-using MockTraceAgent.Core;
+using Datadog.Apm.TracerPayloadInspector.Core;
 
-namespace MockTraceAgent.Web.Services;
+namespace Datadog.Apm.TracerPayloadInspector.Web.Services;
 
 public class TraceAgentHostedService : IHostedService, IDisposable
 {

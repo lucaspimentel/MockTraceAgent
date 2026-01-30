@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 
-namespace MockTraceAgent.Web.Hubs;
+namespace Datadog.Apm.TracerPayloadInspector.Web.Hubs;
 
 public class TracesHub : Hub
 {

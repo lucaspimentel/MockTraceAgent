@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace MockTraceAgent.Web.Serialization;
+namespace Datadog.Apm.TracerPayloadInspector.Web.Serialization;
 
 /// <summary>
 /// Converts ulong values to strings in JSON to prevent JavaScript precision loss.

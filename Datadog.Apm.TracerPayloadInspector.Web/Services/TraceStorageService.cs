@@ -1,11 +1,11 @@
 using System.Collections.Concurrent;
 using MessagePack;
 using Microsoft.AspNetCore.SignalR;
-using MockTraceAgent.Core;
-using MockTraceAgent.Web.Hubs;
-using MockTraceAgent.Web.Models;
+using Datadog.Apm.TracerPayloadInspector.Core;
+using Datadog.Apm.TracerPayloadInspector.Web.Hubs;
+using Datadog.Apm.TracerPayloadInspector.Web.Models;
 
-namespace MockTraceAgent.Web.Services;
+namespace Datadog.Apm.TracerPayloadInspector.Web.Services;
 
 public class TraceStorageService
 {

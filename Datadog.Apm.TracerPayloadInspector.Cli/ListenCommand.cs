@@ -5,10 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using MessagePack;
-using MockTraceAgent.Core;
+using Datadog.Apm.TracerPayloadInspector.Core;
 using Spectre.Console.Cli;
 
-namespace MockTraceAgent.Cli;
+namespace Datadog.Apm.TracerPayloadInspector.Cli;
 
 internal sealed class ListenCommand : Command<ListenCommand.Settings>
 {

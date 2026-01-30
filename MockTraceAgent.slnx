@@ -1,5 +1,6 @@
 ﻿<Solution>
-  <Project Path="MockTraceAgent.Cli\MockTraceAgent.Cli.csproj"/>
-  <Project Path="MockTraceAgent.Core\MockTraceAgent.Core.csproj"/>
-  <Project Path="MockTraceAgent.Web\MockTraceAgent.Web.csproj"/>
+  <Project Path="Datadog.Apm.TracerPayloadInspector.Cli\Datadog.Apm.TracerPayloadInspector.Cli.csproj"/>
+  <Project Path="Datadog.Apm.TracerPayloadInspector.Core\Datadog.Apm.TracerPayloadInspector.Core.csproj"/>
+  <Project Path="Datadog.Apm.TracerPayloadInspector.Web\Datadog.Apm.TracerPayloadInspector.Web.csproj"/>
+  <Project Path="Datadog.Apm.TracerPayloadInspector.NuGet\Datadog.Apm.TracerPayloadInspector.NuGet.csproj"/>
 </Solution>

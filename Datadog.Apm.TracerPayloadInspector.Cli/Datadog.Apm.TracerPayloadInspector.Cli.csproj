@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../MockTraceAgent.Core/MockTraceAgent.Core.csproj" />
+    <ProjectReference Include="../Datadog.Apm.TracerPayloadInspector.Core/Datadog.Apm.TracerPayloadInspector.Core.csproj" />
   </ItemGroup>
 
 </Project>

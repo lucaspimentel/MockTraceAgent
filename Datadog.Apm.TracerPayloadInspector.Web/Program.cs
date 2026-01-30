@@ -1,6 +1,6 @@
-using MockTraceAgent.Web.Hubs;
-using MockTraceAgent.Web.Services;
-using MockTraceAgent.Web.Serialization;
+using Datadog.Apm.TracerPayloadInspector.Web.Hubs;
+using Datadog.Apm.TracerPayloadInspector.Web.Services;
+using Datadog.Apm.TracerPayloadInspector.Web.Serialization;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);

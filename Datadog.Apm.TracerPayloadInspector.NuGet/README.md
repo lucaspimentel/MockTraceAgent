@@ -1,10 +1,10 @@
-# LucasP.MockTraceAgent
+# LucasP.Datadog.Apm.TracerPayloadInspector
 
-Embeddable mock Datadog trace agent for .NET applications.
+Embeddable Datadog tracer payload inspector for .NET applications.
 
 ## Overview
 
-MockTraceAgent allows you to embed a mock Datadog trace agent directly in your .NET applications for in-process trace inspection. Perfect for local development, testing, and debugging of Datadog APM instrumentation.
+TracerPayloadInspector allows you to embed a payload inspector directly in your .NET applications to capture and inspect Datadog APM trace payloads. Perfect for local development, troubleshooting, and debugging of Datadog tracer instrumentation.
 
 ## Features
 
@@ -16,7 +16,7 @@ MockTraceAgent allows you to embed a mock Datadog trace agent directly in your .
 ## Installation
 
 ```bash
-dotnet add package LucasP.MockTraceAgent
+dotnet add package LucasP.Datadog.Apm.TracerPayloadInspector
 ```
 
 ## Usage
@@ -24,13 +24,13 @@ dotnet add package LucasP.MockTraceAgent
 ### Azure Functions (Isolated Worker)
 
 ```csharp
-using MockTraceAgent;
+using Datadog.Apm.TracerPayloadInspector;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices(services =>
     {
-        services.AddMockTraceAgent(options =>
+        services.AddTracerPayloadInspector(options =>
         {
             options.Port = 8126;
         });
@@ -43,12 +43,12 @@ host.Run();
 ### Generic Host / Console App
 
 ```csharp
-using MockTraceAgent;
+using Datadog.Apm.TracerPayloadInspector;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
-        services.AddMockTraceAgent(options =>
+        services.AddTracerPayloadInspector(options =>
         {
             options.Port = 8126;
             options.RequestReceivedCallback = (url, length, bytes) =>
@@ -66,11 +66,11 @@ await host.RunAsync();
 ### ASP.NET Core
 
 ```csharp
-using MockTraceAgent;
+using Datadog.Apm.TracerPayloadInspector;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddMockTraceAgent(options =>
+builder.Services.AddTracerPayloadInspector(options =>
 {
     options.Port = 8126;
 });
@@ -81,20 +81,20 @@ app.Run();
 
 ## Configuration
 
-### MockTraceAgentOptions
+### TracerPayloadInspectorOptions
 
 - **Port** (int): The port to listen on for trace requests. Default: `8126`
 - **RequestReceivedCallback** (Action<string, int, ReadOnlyMemory<byte>>?): Optional callback invoked when traces are received. Parameters are URL, content length, and request body bytes.
 
 ## How It Works
 
-MockTraceAgent starts an HTTP listener on the configured port that accepts Datadog trace payloads in MessagePack format. It responds with a simple JSON acknowledgment, allowing your Datadog tracer to continue sending traces without errors.
+TracerPayloadInspector starts an HTTP listener on the configured port that accepts Datadog trace payloads in MessagePack format. It responds with a simple JSON acknowledgment, allowing your Datadog tracer to continue sending traces without errors.
 
 ## Related Tools
 
-This package is part of the MockTraceAgent toolkit:
-- **MockTraceAgent.Cli**: Command-line tool for trace inspection
-- **MockTraceAgent.Web**: Web UI with real-time trace visualization and flamegraphs
+This package is part of the TracerPayloadInspector toolkit:
+- **TracerPayloadInspector.Cli**: Command-line tool for trace inspection
+- **TracerPayloadInspector.Web**: Web UI with real-time trace visualization and flamegraphs
 
 ## License
 

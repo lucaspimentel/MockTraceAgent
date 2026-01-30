@@ -1,6 +1,6 @@
-using MockTraceAgent.Core;
+using Datadog.Apm.TracerPayloadInspector.Core;
 
-namespace MockTraceAgent.Web.Models;
+namespace Datadog.Apm.TracerPayloadInspector.Web.Models;
 
 public class PayloadData
 {

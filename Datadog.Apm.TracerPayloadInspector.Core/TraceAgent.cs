@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Net;
 using System.Threading;
 
-namespace MockTraceAgent.Core;
+namespace Datadog.Apm.TracerPayloadInspector.Core;
 
 public sealed class TraceAgent : IDisposable
 {

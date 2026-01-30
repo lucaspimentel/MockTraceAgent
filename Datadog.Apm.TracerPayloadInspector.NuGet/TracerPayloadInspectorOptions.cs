@@ -1,6 +1,6 @@
-namespace MockTraceAgent;
+namespace Datadog.Apm.TracerPayloadInspector;
 
-public class MockTraceAgentOptions
+public class TracerPayloadInspectorOptions
 {
     public int Port { get; set; } = 8126;
     public Action<string, int, ReadOnlyMemory<byte>>? RequestReceivedCallback { get; set; }
