@@ -1,6 +1,9 @@
 ﻿<Solution>
   <Folder Name="/solution items/">
     <File Path=".github/workflows/build-nuget.yml" />
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+    <File Path="TODO.md" />
   </Folder>
   <Project Path="Datadog.Apm.TracerPayloadInspector.Cli\Datadog.Apm.TracerPayloadInspector.Cli.csproj" />
   <Project Path="Datadog.Apm.TracerPayloadInspector.Core\Datadog.Apm.TracerPayloadInspector.Core.csproj" />
