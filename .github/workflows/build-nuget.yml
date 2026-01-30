@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'  # Trigger on version tags like v1.0.0, v1.2.3, v1.0.0-beta1, etc.
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
 
     steps:
