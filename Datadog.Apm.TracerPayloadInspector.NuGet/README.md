@@ -12,6 +12,8 @@ TracerPayloadInspector allows you to embed a payload inspector directly in your 
 - **Flexible Configuration**: Configure port and optional request callbacks
 - **Multi-Framework Support**: Targets .NET 8.0 and .NET 9.0
 - **Zero Dependencies**: Uses only core Microsoft.Extensions abstractions
+- **Built-in Logging**: Debug and error logging via `ILogger<TracerPayloadInspectorService>`
+- **Exception Handling**: Gracefully handles deserialization and callback errors without crashing
 
 ## Installation
 
@@ -155,6 +157,42 @@ builder.Services.AddTracerPayloadInspector(options =>
 ```
 
 **Note**: JSON conversion requires `MessagePack` NuGet package (version 2.x).
+
+## Logging and Diagnostics
+
+TracerPayloadInspector uses `ILogger<TracerPayloadInspectorService>` for comprehensive logging:
+
+### Debug Logging
+
+Enable debug logging to see detailed operation information:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Datadog.Apm.TracerPayloadInspector.TracerPayloadInspectorService": "Debug"
+    }
+  }
+}
+```
+
+Debug logs include:
+- Request received (URL, content length)
+- Deserialization attempts and results
+- Callback invocations
+- Skipped operations (empty payloads, non-matching URLs)
+
+### Error Logging
+
+Error logs are always enabled and capture:
+- **Deserialization failures**: MessagePack parsing errors with URL and byte count for context
+- **Callback exceptions**: Errors thrown by user-provided `RequestReceivedCallback`
+
+All exceptions are caught and logged without crashing the service, ensuring continuous operation.
+
+### Performance
+
+Debug logs use `logger.IsEnabled(LogLevel.Debug)` checks to avoid string formatting overhead when debug logging is disabled.
 
 ## How It Works
 

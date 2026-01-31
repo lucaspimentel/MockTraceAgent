@@ -76,12 +76,29 @@ using Datadog.Apm.TracerPayloadInspector;
 // Azure Functions, Generic Host, or ASP.NET Core
 services.AddTracerPayloadInspector(options =>
 {
-    options.Port = 8126;
-    options.RequestReceivedCallback = (url, length, bytes) =>
+    options.ListeningPort = 8126;
+    options.DeserializeContents = true;  // Enable automatic deserialization
+    options.RequestReceivedCallback = args =>
     {
-        Console.WriteLine($"Received {length} bytes at {url}");
+        Console.WriteLine($"Received {args.Length} bytes at {args.Url}");
+        if (args.TraceChunks != null)
+        {
+            Console.WriteLine($"  {args.ChunkCount} chunks, {args.TotalSpanCount} spans");
+        }
     };
 });
+```
+
+**Debug Logging**: The NuGet package logs to `ILogger<TracerPayloadInspectorService>`. Enable debug logging to see request details, deserialization attempts, and errors:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Datadog.Apm.TracerPayloadInspector.TracerPayloadInspectorService": "Debug"
+    }
+  }
+}
 ```
 
 See [NuGet package README](Datadog.Apm.TracerPayloadInspector.NuGet/README.md) for detailed integration examples.

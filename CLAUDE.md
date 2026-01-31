@@ -239,14 +239,23 @@ Library for embedding the payload inspector in .NET applications:
    - Background service that runs TraceAgent in hosted applications
    - Configurable via TracerPayloadInspectorOptions
    - Integrates with Microsoft.Extensions.Hosting
+   - Logging: Uses `ILogger<TracerPayloadInspectorService>` for debug and error logging
+     - Debug logs: Request received, deserialization attempts/success, callback invocations
+     - Error logs: Deserialization failures, callback exceptions
+     - All debug logs use `IsEnabled(LogLevel.Debug)` checks for performance
 
 2. **TracerPayloadInspectorOptions.cs** - Configuration options
-   - Port: Listening port (default 8126)
+   - ListeningPort: Port to listen on (default 8126)
+   - DeserializeContents: Enable automatic MessagePack deserialization (default false)
    - RequestReceivedCallback: Optional callback for received requests
 
 3. **ServiceCollectionExtensions.cs** - Extension methods
    - AddTracerPayloadInspector(): Registers the hosted service
    - Supports configuration via options pattern
+
+4. **Exception Handling**
+   - Catches and logs MessagePack deserialization errors without crashing the service
+   - Catches and logs user callback exceptions to prevent service termination
 
 ### Datadog Trace Format
 
