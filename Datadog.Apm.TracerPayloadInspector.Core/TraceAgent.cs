@@ -87,7 +87,7 @@ public sealed class TraceAgent : IDisposable
                     byte[]? rentedBuffer;
                     ReadOnlyMemory<byte> memory;
 
-                    if (_readRequestBytes)
+                    if (_readRequestBytes && contentLength > 0)
                     {
                         rentedBuffer = ArrayPool<byte>.Shared.Rent(contentLength);
                         var bytesRead = ctx.Request.InputStream.Read(rentedBuffer, 0, contentLength);
@@ -96,7 +96,7 @@ public sealed class TraceAgent : IDisposable
                     else
                     {
                         rentedBuffer = null;
-                        memory = null;
+                        memory = ReadOnlyMemory<byte>.Empty;
                     }
 
                     _requestReceivedCallback(ctx.Request.RawUrl ?? "no-url", contentLength, memory);
