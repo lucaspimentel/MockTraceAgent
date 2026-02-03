@@ -9,7 +9,7 @@ TracerPayloadInspector allows you to embed a payload inspector directly in your 
 ## Features
 
 - **Easy Integration**: Simple `IHostedService` integration using Microsoft.Extensions.Hosting
-- **Flexible Configuration**: Configure port and optional request callbacks
+- **Flexible Configuration**: Configure port and granular content processing options
 - **Multi-Framework Support**: Targets .NET 8.0 and .NET 9.0
 - **Zero Dependencies**: Uses only core Microsoft.Extensions abstractions
 - **Built-in Logging**: Debug and error logging via `ILogger<TracerPayloadInspectorService>`
@@ -21,7 +21,7 @@ TracerPayloadInspector allows you to embed a payload inspector directly in your 
 dotnet add package LucasP.Datadog.Apm.TracerPayloadInspector
 ```
 
-## Usage
+## Quick Start
 
 ### Azure Functions (Isolated Worker)
 
@@ -55,7 +55,6 @@ var host = Host.CreateDefaultBuilder(args)
             options.ListeningPort = 8126;
             options.RequestReceivedCallback = args =>
             {
-                // Optional: log or process received traces
                 Console.WriteLine($"Received {args.Length} bytes at {args.Url}");
             };
         });
@@ -81,39 +80,94 @@ var app = builder.Build();
 app.Run();
 ```
 
-## Configuration
+## Configuration Options
 
 ### TracerPayloadInspectorOptions
 
-- **ListeningPort** (int): The port to listen on for trace requests. Default: `8126`
-- **DeserializeContents** (bool): When `true`, automatically deserializes MessagePack payloads and provides parsed span data in the callback. Default: `false`
-- **RequestReceivedCallback** (Action<RequestReceivedCallbackArgs>?): Optional callback invoked when traces are received. Provides URL, content length, raw bytes, and optionally deserialized trace chunks (if `DeserializeContents` is enabled).
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `ListeningPort` | int | `8126` | Port to listen on for incoming trace requests |
+| `ReadContents` | bool | `true` | Read the raw bytes of the request body into memory |
+| `DeserializeContents` | bool | `true` | Deserialize MessagePack payloads into `Span` objects |
+| `ConvertToJson` | bool | `true` | Convert MessagePack payloads to JSON string |
+| `RequestReceivedCallback` | Action | `null` | Callback invoked when a request is received |
 
-## Inspecting and Processing Trace Payloads
+### RequestReceivedCallbackArgs
 
-Enable `DeserializeContents` to automatically deserialize MessagePack payloads and access parsed span data:
+The callback receives an `RequestReceivedCallbackArgs` object with the following properties:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Url` | string | The request URL (e.g., `/v0.4/traces`) |
+| `Length` | int | Content length in bytes |
+| `Contents` | ReadOnlyMemory\<byte\> | Raw MessagePack bytes (if `ReadContents` is enabled) |
+| `TraceChunks` | IReadOnlyList\<IReadOnlyList\<Span\>\>? | Deserialized spans (if `DeserializeContents` is enabled) |
+| `ChunkCount` | int? | Number of trace chunks (if deserialized) |
+| `TotalSpanCount` | int? | Total number of spans (if deserialized) |
+| `Json` | string? | JSON representation (if `ConvertToJson` is enabled) |
+
+## Usage Examples
+
+### Minimal Setup (Just Listen)
+
+Accept trace requests without any processing - useful for preventing tracer errors:
+
+```csharp
+services.AddTracerPayloadInspector(options =>
+{
+    options.ListeningPort = 8126;
+    options.ReadContents = false;      // Don't read request body
+    options.DeserializeContents = false;
+    options.ConvertToJson = false;
+});
+```
+
+### Log Request Metadata Only
+
+Log basic request info without deserializing content:
+
+```csharp
+services.AddTracerPayloadInspector(options =>
+{
+    options.ListeningPort = 8126;
+    options.ReadContents = true;
+    options.DeserializeContents = false;
+    options.ConvertToJson = false;
+    options.RequestReceivedCallback = args =>
+    {
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {args.Url}: {args.Length:N0} bytes");
+    };
+});
+```
+
+### Inspect Deserialized Spans
+
+Parse spans and inspect their properties:
 
 ```csharp
 using Datadog.Apm.TracerPayloadInspector;
 using Datadog.Apm.TracerPayloadInspector.Core;
 
-builder.Services.AddTracerPayloadInspector(options =>
+services.AddTracerPayloadInspector(options =>
 {
     options.ListeningPort = 8126;
     options.DeserializeContents = true;
+    options.ConvertToJson = false;      // Skip JSON conversion if not needed
     options.RequestReceivedCallback = args =>
     {
         Console.WriteLine($"Received {args.Length} bytes at {args.Url}");
 
         if (args.TraceChunks is not null)
         {
-            Console.WriteLine($"  {args.ChunkCount} trace chunks with {args.TotalSpanCount} total spans");
+            Console.WriteLine($"  {args.ChunkCount} trace chunks, {args.TotalSpanCount} total spans");
 
             foreach (var chunk in args.TraceChunks)
             {
                 foreach (var span in chunk)
                 {
-                    Console.WriteLine($"  Span: {span.Service}.{span.Name} (trace_id={span.TraceId}, span_id={span.SpanId})");
+                    Console.WriteLine($"  - {span.Service}.{span.Name} [{span.Resource}]");
+                    Console.WriteLine($"    trace_id={span.TraceId}, span_id={span.SpanId}");
+                    Console.WriteLine($"    duration={span.Duration / 1_000_000.0:F2}ms, error={span.Error}");
                 }
             }
         }
@@ -121,42 +175,133 @@ builder.Services.AddTracerPayloadInspector(options =>
 });
 ```
 
-### Saving Payloads to Files
+### Get JSON for Logging or Storage
 
-You can save received payloads to files for offline analysis:
+Use automatic JSON conversion for easy logging:
 
 ```csharp
-using Datadog.Apm.TracerPayloadInspector;
-using MessagePack;
-
-builder.Services.AddTracerPayloadInspector(options =>
+services.AddTracerPayloadInspector(options =>
 {
     options.ListeningPort = 8126;
-    options.DeserializeContents = true;
+    options.DeserializeContents = false;  // Skip span parsing
+    options.ConvertToJson = true;
     options.RequestReceivedCallback = args =>
     {
-        if (args.Contents.Length > 0 && args.Url == "/v0.4/traces")
+        if (args.Json is not null)
         {
-            var now = DateTime.Now;
-            var filenameUrlPart = args.Url.TrimStart('/').Replace('/', '_');
+            // Log the JSON representation
+            Console.WriteLine(args.Json);
 
-            // Save raw MessagePack bytes
-            var msgpackFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.bin";
-            using var msgpackFileStream = File.Create(msgpackFilename);
-            msgpackFileStream.Write(args.Contents.Span);
-            Console.WriteLine($"Saved raw bytes to \"{msgpackFilename}\"");
-
-            // Convert to JSON and save
-            var jsonFilename = $"payload-{filenameUrlPart}-{now:yyyy-MM-dd_HH-mm-ss-ff}.json";
-            string json = MessagePackSerializer.ConvertToJson(args.Contents);
-            File.WriteAllText(jsonFilename, json);
-            Console.WriteLine($"Saved JSON to \"{jsonFilename}\"");
+            // Or save to file
+            File.WriteAllText($"trace-{DateTime.Now:yyyyMMdd-HHmmss}.json", args.Json);
         }
     };
 });
 ```
 
-**Note**: JSON conversion requires `MessagePack` NuGet package (version 2.x).
+### Full Processing (All Options Enabled)
+
+Enable all processing options for maximum flexibility:
+
+```csharp
+services.AddTracerPayloadInspector(options =>
+{
+    options.ListeningPort = 8126;
+    options.ReadContents = true;
+    options.DeserializeContents = true;
+    options.ConvertToJson = true;
+    options.RequestReceivedCallback = args =>
+    {
+        Console.WriteLine($"Received {args.Length} bytes at {args.Url}");
+
+        // Access deserialized spans
+        if (args.TraceChunks is not null)
+        {
+            Console.WriteLine($"  {args.ChunkCount} chunks, {args.TotalSpanCount} spans");
+        }
+
+        // Access JSON representation
+        if (args.Json is not null)
+        {
+            Console.WriteLine($"  JSON length: {args.Json.Length} chars");
+        }
+
+        // Access raw bytes for custom processing
+        if (args.Contents.Length > 0)
+        {
+            Console.WriteLine($"  Raw bytes: {args.Contents.Length}");
+        }
+    };
+});
+```
+
+### Save Payloads to Files
+
+Save both raw MessagePack and JSON formats for offline analysis:
+
+```csharp
+services.AddTracerPayloadInspector(options =>
+{
+    options.ListeningPort = 8126;
+    options.ReadContents = true;
+    options.ConvertToJson = true;
+    options.RequestReceivedCallback = args =>
+    {
+        if (args.Contents.Length > 0 && args.Url == "/v0.4/traces")
+        {
+            var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-ff");
+
+            // Save raw MessagePack bytes
+            var binFilename = $"payload-{timestamp}.bin";
+            using (var fs = File.Create(binFilename))
+            {
+                fs.Write(args.Contents.Span);
+            }
+            Console.WriteLine($"Saved raw bytes to {binFilename}");
+
+            // Save JSON (already converted by the service)
+            if (args.Json is not null)
+            {
+                var jsonFilename = $"payload-{timestamp}.json";
+                File.WriteAllText(jsonFilename, args.Json);
+                Console.WriteLine($"Saved JSON to {jsonFilename}");
+            }
+        }
+    };
+});
+```
+
+### Filter by Service Name
+
+Inspect only specific services:
+
+```csharp
+services.AddTracerPayloadInspector(options =>
+{
+    options.ListeningPort = 8126;
+    options.DeserializeContents = true;
+    options.ConvertToJson = false;
+    options.RequestReceivedCallback = args =>
+    {
+        if (args.TraceChunks is null) return;
+
+        var targetService = "my-api";
+        var matchingSpans = args.TraceChunks
+            .SelectMany(chunk => chunk)
+            .Where(span => span.Service == targetService)
+            .ToList();
+
+        if (matchingSpans.Count > 0)
+        {
+            Console.WriteLine($"Found {matchingSpans.Count} spans for service '{targetService}':");
+            foreach (var span in matchingSpans)
+            {
+                Console.WriteLine($"  - {span.Name}: {span.Duration / 1_000_000.0:F2}ms");
+            }
+        }
+    };
+});
+```
 
 ## Logging and Diagnostics
 
