@@ -8,7 +8,8 @@ public class RequestReceivedCallbackArgs(
     ReadOnlyMemory<byte> contents,
     IReadOnlyList<IReadOnlyList<Span>>? traceChunks,
     int? chunkCount,
-    int? totalSpanCount)
+    int? totalSpanCount,
+    string? json)
 {
     public string Url { get; } = url;
 
@@ -21,4 +22,6 @@ public class RequestReceivedCallbackArgs(
     public int? ChunkCount { get; } = chunkCount;
 
     public int? TotalSpanCount { get; } = totalSpanCount;
+
+    public string? Json { get; } = json;
 }
