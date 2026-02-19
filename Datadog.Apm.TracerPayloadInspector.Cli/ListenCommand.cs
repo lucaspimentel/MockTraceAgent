@@ -82,8 +82,23 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
                 return 1;
         }
 
-        Console.WriteLine($"Listening for traces on port {settings.Port}. Press [ENTER] to exit.");
-        Console.ReadLine();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            cts.Cancel();
+        };
+
+        if (Console.IsInputRedirected)
+        {
+            Console.WriteLine($"Listening for traces on port {settings.Port}. Send SIGINT/SIGTERM to exit.");
+            cts.Token.WaitHandle.WaitOne();
+        }
+        else
+        {
+            Console.WriteLine($"Listening for traces on port {settings.Port}. Press [ENTER] to exit.");
+            Console.ReadLine();
+        }
 
         agent.Dispose();
         return 0;
