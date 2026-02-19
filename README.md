@@ -5,7 +5,7 @@ A diagnostic tool for inspecting and debugging Datadog tracer payloads. This too
 **Available in three flavors:**
 - **CLI Application**: Command-line tool for quick trace inspection and file saving
 - **Web Application**: Browser-based UI with real-time trace visualization and flamegraphs
-- **NuGet Package**: Embeddable library for integrating into your .NET applications
+- **NuGet Package**: Embeddable library for integrating into your .NET applications with granular content processing controls
 
 ## Features
 
@@ -77,13 +77,19 @@ using Datadog.Apm.TracerPayloadInspector;
 services.AddTracerPayloadInspector(options =>
 {
     options.ListeningPort = 8126;
-    options.DeserializeContents = true;  // Enable automatic deserialization
+    options.ReadContents = true;          // Read request body into memory (default: true)
+    options.DeserializeContents = true;   // Deserialize MessagePack to Span objects (default: true)
+    options.ConvertToJson = true;         // Convert MessagePack to JSON string (default: true)
     options.RequestReceivedCallback = args =>
     {
         Console.WriteLine($"Received {args.Length} bytes at {args.Url}");
         if (args.TraceChunks != null)
         {
             Console.WriteLine($"  {args.ChunkCount} chunks, {args.TotalSpanCount} spans");
+        }
+        if (args.Json != null)
+        {
+            Console.WriteLine($"  JSON: {args.Json.Length} chars");
         }
     };
 });

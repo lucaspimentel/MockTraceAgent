@@ -36,6 +36,13 @@ Datadog.Apm.TracerPayloadInspector/
 │   ├── Datadog.Apm.TracerPayloadInspector.Core.csproj  # Shared library project
 │   ├── TraceAgent.cs               # HTTP listener implementation
 │   └── Span.cs                     # MessagePack data model
+├── Datadog.Apm.TracerPayloadInspector.NuGet/
+│   ├── Datadog.Apm.TracerPayloadInspector.NuGet.csproj # NuGet package project
+│   ├── TracerPayloadInspectorService.cs  # IHostedService implementation
+│   ├── TracerPayloadInspectorOptions.cs  # Configuration options
+│   ├── RequestReceivedCallbackArgs.cs    # Callback argument model
+│   ├── ServiceCollectionExtensions.cs    # DI registration extensions
+│   └── README.md                    # NuGet package README
 └── Datadog.Apm.TracerPayloadInspector.Web/
     ├── Datadog.Apm.TracerPayloadInspector.Web.csproj   # Web application project
     ├── Program.cs                   # ASP.NET Core entry point
@@ -129,6 +136,8 @@ Core components shared between CLI, Web, and NuGet projects:
 1. **TraceAgent.cs** - HTTP listener implementation
    - Creates `HttpListener` on both 127.0.0.1 and localhost
    - Runs dedicated thread for handling HTTP requests
+   - Constructor: `TraceAgent(int port, Action<string, int, ReadOnlyMemory<byte>>? requestReceivedCallback, bool readRequestBytes)`
+   - `readRequestBytes` controls whether request body bytes are read into memory
    - Uses `ArrayPool<byte>` for efficient memory management when reading request bodies
    - Returns simple `{}` JSON response to all requests
    - Invokes callback with URL, content length, and memory buffer for each request
@@ -246,14 +255,22 @@ Library for embedding the payload inspector in .NET applications:
 
 2. **TracerPayloadInspectorOptions.cs** - Configuration options
    - ListeningPort: Port to listen on (default 8126)
-   - DeserializeContents: Enable automatic MessagePack deserialization (default false)
+   - ReadContents: Read raw request body bytes into memory (default true)
+   - DeserializeContents: Enable automatic MessagePack deserialization (default true)
+   - ConvertToJson: Convert MessagePack payloads to JSON string (default true)
    - RequestReceivedCallback: Optional callback for received requests
 
-3. **ServiceCollectionExtensions.cs** - Extension methods
+3. **RequestReceivedCallbackArgs.cs** - Callback argument model
+   - Url, Length: Request metadata
+   - Contents: Raw bytes (when ReadContents is enabled)
+   - TraceChunks, ChunkCount, TotalSpanCount: Deserialized data (when DeserializeContents is enabled)
+   - Json: JSON representation (when ConvertToJson is enabled)
+
+4. **ServiceCollectionExtensions.cs** - Extension methods
    - AddTracerPayloadInspector(): Registers the hosted service
    - Supports configuration via options pattern
 
-4. **Exception Handling**
+5. **Exception Handling**
    - Catches and logs MessagePack deserialization errors without crashing the service
    - Catches and logs user callback exceptions to prevent service termination
 
