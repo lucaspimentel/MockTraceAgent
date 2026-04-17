@@ -32,7 +32,7 @@ dotnet run --project Datadog.Apm.TracerPayloadInspector.Web.csproj
 ## Dependencies
 
 ### External NuGet Packages
-- **MessagePack** (2.5.198) - MessagePack deserialization
+- **MessagePack** (3.1.4) - MessagePack deserialization
 - ASP.NET Core framework (included in .NET 9.0 SDK) - Web hosting, SignalR
 
 ### Project References

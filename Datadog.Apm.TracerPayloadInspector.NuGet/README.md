@@ -10,7 +10,7 @@ TracerPayloadInspector allows you to embed a payload inspector directly in your 
 
 - **Easy Integration**: Simple `IHostedService` integration using Microsoft.Extensions.Hosting
 - **Flexible Configuration**: Configure port and granular content processing options
-- **Multi-Framework Support**: Targets .NET 8.0 and .NET 9.0
+- **Multi-Framework Support**: Targets .NET 6.0 and later
 - **Zero Dependencies**: Uses only core Microsoft.Extensions abstractions
 - **Built-in Logging**: Debug and error logging via `ILogger<TracerPayloadInspectorService>`
 - **Exception Handling**: Gracefully handles deserialization and callback errors without crashing

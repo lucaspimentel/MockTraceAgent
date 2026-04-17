@@ -16,13 +16,13 @@ The solution consists of four projects:
 
 ## Project Configuration
 
-- **Target Framework**: .NET 9.0
+- **Target Frameworks**: CLI and Web target .NET 10.0; Core and NuGet target .NET 6.0
 - **Language Version**: latest C#
 - **Nullable**: enabled
 - **Key Dependencies**:
-  - MessagePack (2.x) - for deserializing trace payloads
+  - MessagePack (3.x) - for deserializing trace payloads
   - Spectre.Console.Cli (0.x) - for CLI argument parsing (CLI only)
-  - SignalR (9.x) - for real-time web updates (Web only)
+  - SignalR (10.x) - for real-time web updates (Web only)
 
 ## Project Structure
 
@@ -71,7 +71,7 @@ Datadog.Apm.TracerPayloadInspector/
 dotnet build
 
 # Build specific projects
-dotnet build Datadog.Apm.TracerPayloadInspector.Cli.csproj
+dotnet build Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj
 dotnet build Datadog.Apm.TracerPayloadInspector.Core/Datadog.Apm.TracerPayloadInspector.Core.csproj
 dotnet build Datadog.Apm.TracerPayloadInspector.Web/Datadog.Apm.TracerPayloadInspector.Web.csproj
 ```
@@ -80,28 +80,28 @@ dotnet build Datadog.Apm.TracerPayloadInspector.Web/Datadog.Apm.TracerPayloadIns
 
 ```bash
 # Run the CLI application (default port 8126)
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli.csproj
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj
 
 # Run with custom port
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --port 8080
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --port 8080
 
 # Show trace/span counts (requires deserialization)
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --show-counts
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --show-counts
 
 # Save raw payloads to files
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --save RawBytes
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --save RawBytes
 
 # Save payloads as JSON
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --save ConvertToJson
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --save ConvertToJson
 
 # Save both raw and JSON
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --save All
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --save All
 
 # Filter by URL (default: /traces)
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --url-filter /v0.4/traces
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --filter /v0.4/traces
 
 # Combined example
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --port 8126 --show-counts --save All
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --port 8126 --show-counts --save All
 ```
 
 ### Web Application
@@ -159,7 +159,7 @@ Core components shared between CLI, Web, and NuGet projects:
      - `--port` / `-p`: Port to listen on (default: 8126)
      - `--show-counts` / `-c`: Deserialize and display trace chunk/span counts
      - `--save` / `-s`: Save payloads (None/RawBytes/ConvertToJson/All)
-     - `--url-filter` / `-f`: URL filter for processing (default: "/traces")
+     - `--filter` / `-f`: URL filter for processing (default: "/traces")
    - Instantiates `TraceAgent` from Core library and handles request callbacks
    - `RequestReceived()` callback handles payload inspection and saving
 

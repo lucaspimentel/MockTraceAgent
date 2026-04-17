@@ -14,7 +14,7 @@ This library provides the fundamental components for receiving and deserializing
 ## Dependencies
 
 ### External NuGet Packages
-- **MessagePack** (2.5.198) - MessagePack serialization for Datadog trace payloads
+- **MessagePack** (3.1.4) - MessagePack serialization for Datadog trace payloads
 
 ### Project References
 None - this is a foundational library with no project dependencies.

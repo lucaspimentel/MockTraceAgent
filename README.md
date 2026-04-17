@@ -36,7 +36,7 @@ A diagnostic tool for inspecting and debugging Datadog tracer payloads. This too
 
 ## Requirements
 
-- .NET 9.0 SDK or later
+- .NET 10.0 SDK or later (CLI and Web applications require .NET 10.0; NuGet package supports .NET 6.0 and later)
 
 ## Installation
 
@@ -194,7 +194,7 @@ Example: `payload-v0.4_traces-2025-11-06_14-23-45-12.json`
 Filter which URLs are processed and saved (default: `/traces`):
 
 ```bash
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --url-filter /v0.4/traces
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --filter /v0.4/traces
 dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- -f /v0.4/traces
 ```
 
@@ -209,7 +209,7 @@ dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPa
 Full monitoring with all features:
 
 ```bash
-dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --port 8126 --show-counts --save All --url-filter /v0.4/traces
+dotnet run --project Datadog.Apm.TracerPayloadInspector.Cli/Datadog.Apm.TracerPayloadInspector.Cli.csproj -- --port 8126 --show-counts --save All --filter /v0.4/traces
 ```
 
 ## Configuration for Datadog Tracers
