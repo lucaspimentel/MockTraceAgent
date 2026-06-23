@@ -41,7 +41,7 @@ internal sealed class ListenCommand : Command<ListenCommand.Settings>
         public string? UrlFilter { get; init; }
     }
 
-    public override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
+    protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var readRequestBytes = settings.ShowCounts || settings.SaveFileOptions != SaveOptions.None;
 
